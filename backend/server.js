@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
+import prescriptionRouter from './src/routes/prescription.js';
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use('/api/prescriptions', prescriptionRouter);
 
 // Basic Health Check Route
 app.get('/', (req, res) => {

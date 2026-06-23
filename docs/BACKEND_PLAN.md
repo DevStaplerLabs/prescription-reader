@@ -15,16 +15,16 @@ This document outlines the step-by-step plan for developing the Node.js backend 
 ## Step-by-Step Roadmap
 
 ### Step 1 — Setup & Infrastructure
-- [ ] Initialize Express.js project with `npm init` and configure ES modules/CommonJS.
-- [ ] Setup Git repository, `.gitignore` (excl. `node_modules` and `.env`), and push to remote.
-- [ ] Setup MongoDB Atlas cluster (free tier) and write the database connection utility in `src/config/db.js`.
-- [ ] Create a Google Cloud project, enable the **Cloud Vision API**, generate credentials, and save the service account key/API key.
-- [ ] Configure environment variables in `.env` (Port, MongoDB URI, GCP Credentials).
+- [x] Initialize Express.js project with `npm init` and configure ES modules/CommonJS.
+- [x] Setup Git repository, `.gitignore` (excl. `node_modules` and `.env`), and push to remote.
+- [x] Setup MongoDB Atlas cluster (free tier) and write the database connection utility in `src/config/db.js`.
+- [x] Create a Google Cloud project, enable the **Cloud Vision API**, generate credentials, and save the service account key/API key.
+- [x] Configure environment variables in `.env` (Port, MongoDB URI, GCP Credentials).
 
 ### Step 2 — Prescription Upload & OCR
-- [ ] Configure `multer` middleware (`src/middleware/upload.js`) to handle image uploads and store them temporarily or on cloud storage.
-- [ ] Create a vision service (`src/services/visionService.js`) to interface with `@google-cloud/vision`.
-- [ ] Create route: `POST /api/prescriptions/upload` (Public)
+- [x] Configure `multer` middleware (`src/middleware/upload.js`) to handle image uploads and store them temporarily or on cloud storage.
+- [x] Create a vision service (`src/services/visionService.js`) to interface with `@google-cloud/vision`.
+- [x] Create route: `POST /api/prescriptions/upload` (Public)
   - Processes uploaded image via the Vision API.
   - Returns raw OCR text extracted from the document to the frontend.
 
