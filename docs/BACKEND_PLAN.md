@@ -29,15 +29,17 @@ This document outlines the step-by-step plan for developing the Node.js backend 
   - Returns raw OCR text extracted from the document to the frontend.
 
 ### Step 3 — Parsing & Schedule Generation
-- [ ] Build the parser service (`src/services/nlpService.js`):
-  - Parses text output to extract structured fields: `drugName`, `dosage`, `frequency`, `duration` (in days), appointment/test dates.
-  - Can use structured prompt parsing with an LLM or regular expressions.
-- [ ] Design DB Schemas:
+- [x] Build the parser service (`src/services/nlpService.js`):
+  - Parses prescription images directly using Gemini 3.5 Flash Vision for structured extraction.
+  - Extracts structured fields: `drugName`, `dosage`, `frequency`, `duration` (in days), appointment/test dates.
+  - Uses `responseMimeType: 'application/json'` for guaranteed JSON output.
+  - Includes validation layer for frequency, duration, and required fields.
+- [x] Design DB Schemas:
   - `src/models/Prescription.js`: `rawOcrText`, `extractedData`, `createdAt`.
   - `src/models/Schedule.js`: `prescriptionId`, `medications` (array of object: `drugName`, `dosage`, `frequencyTimes` e.g. 08:00, 20:00, `startDate`, `endDate`), `appointments` (array of dates), `tests` (array of dates), `isActive`.
-- [ ] Create routes:
-  - `POST /api/prescriptions/parse` — Receives image, triggers OCR + parsing, returns structured JSON representation to the client for validation.
-  - `POST /api/schedules` — Receives validated JSON from user, saves `Prescription` and `Schedule` records.
+- [x] Create routes:
+  - `POST /api/prescriptions/parse` — Receives image, triggers OCR + Gemini Vision parsing, returns structured JSON representation to the client for validation.
+  - `POST /api/prescriptions/confirm` — Receives validated JSON from user, saves `Prescription` and `Schedule` records.
 
 ### Step 4 — Reminders & Adherence Logs
 - [ ] Design adherence schema (`src/models/AdherenceLog.js`):
