@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import prescriptionRouter from './src/routes/prescription.js';
+import scheduleRouter from './src/routes/schedule.js';
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/prescriptions', prescriptionRouter);
+app.use('/api/schedules', scheduleRouter);
 
 // Basic Health Check Route
 app.get('/', (req, res) => {
