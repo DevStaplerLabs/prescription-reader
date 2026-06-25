@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 class ApiService {
+  // ignore: unused_field
   final Dio _dio = Dio();
 
   // Mock method to upload image and return parsed OCR text
