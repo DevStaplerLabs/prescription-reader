@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/gradient_button.dart';
 
 class MedicationForm {
   final TextEditingController drugName;
@@ -74,13 +77,23 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedules Saved Successfully!')),
+        SnackBar(
+          content: Text('Schedules Saved Successfully!', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          backgroundColor: AppTheme.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       context.go('/'); // Go back home
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
+        SnackBar(
+          content: Text('Failed to save: $e', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          backgroundColor: AppTheme.dangerColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -105,25 +118,60 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     final rawText = widget.ocrData['rawOcrText']?.toString() ?? 'No raw text';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirm Details')),
+      appBar: AppBar(
+        title: Text(
+          'Confirm Details',
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryColor,
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Parsed Prescription Text:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Text(
+              'Parsed Prescription Text:',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
+                color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
-              child: Text(rawText, style: const TextStyle(fontFamily: 'monospace')),
+              child: Text(
+                rawText,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  color: AppTheme.primaryColor.withValues(alpha: 0.8),
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            const SizedBox(height: 24),
-            const Text('Edit Extracted Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 32),
+            Text(
+              'Edit Extracted Details:',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+                fontSize: 16,
+              ),
+            ),
             const SizedBox(height: 16),
             
             ListView.builder(
@@ -132,79 +180,124 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
               itemCount: _forms.length,
               itemBuilder: (context, index) {
                 final form = _forms[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: Colors.blue.withValues(alpha: 0.1)),
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: AppTheme.premiumShadow,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Medication ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            if (_forms.length > 1)
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _removeMedication(index),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Medication ${index + 1}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          if (_forms.length > 1)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.dangerColor),
+                              onPressed: () => _removeMedication(index),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: form.drugName,
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        decoration: const InputDecoration(
+                          labelText: 'Drug Name',
+                          hintText: 'e.g. Paracetamol',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: form.dosage,
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                              decoration: const InputDecoration(
+                                labelText: 'Dosage',
+                                hintText: 'e.g. 500mg',
                               ),
-                          ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: form.frequency,
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                              decoration: const InputDecoration(
+                                labelText: 'Frequency',
+                                hintText: 'e.g. 1-0-1',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: form.duration,
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        decoration: const InputDecoration(
+                          labelText: 'Duration (Days)',
+                          hintText: 'e.g. 5',
                         ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: form.drugName,
-                          decoration: const InputDecoration(labelText: 'Drug Name', border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: form.dosage,
-                          decoration: const InputDecoration(labelText: 'Dosage', border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: form.frequency,
-                          decoration: const InputDecoration(labelText: 'Frequency', border: OutlineInputBorder()),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          controller: form.duration,
-                          decoration: const InputDecoration(labelText: 'Duration (Days)', border: OutlineInputBorder()),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ],
-                    ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ],
                   ),
                 );
               },
             ),
+            const SizedBox(height: 8),
             
-            TextButton.icon(
+            OutlinedButton(
               onPressed: _addMedication,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Another Medication'),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.accentColor,
+                side: const BorderSide(color: AppTheme.accentColor, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                minimumSize: const Size(double.infinity, 56),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_rounded, color: AppTheme.accentColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Add Medication',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-            
-            const SizedBox(height: 32),
-            _isSaving
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _saveSchedule,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
-                    ),
-                    child: const Text('Save All Schedules'),
-                  ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
+          child: GradientButton(
+            text: 'Save Schedule ✓',
+            onPressed: _isSaving ? null : _saveSchedule,
+            isLoading: _isSaving,
+          ),
         ),
       ),
     );
