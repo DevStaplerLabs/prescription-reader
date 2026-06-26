@@ -15,7 +15,32 @@ class PhoneInputScreen extends ConsumerStatefulWidget {
 
 class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
   final TextEditingController _phoneCtrl = TextEditingController();
+  final FocusNode _phoneFocusNode = FocusNode();
   bool _isLoading = false;
+  bool _isDpdpAgreed = false;
+  bool _isInputValid = false;
+  bool _isPhoneFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneCtrl.addListener(_validateInput);
+    _phoneFocusNode.addListener(() {
+      setState(() {
+        _isPhoneFocused = _phoneFocusNode.hasFocus;
+      });
+    });
+  }
+
+  void _validateInput() {
+    final text = _phoneCtrl.text.trim();
+    final isValid = text.length >= 10;
+    if (isValid != _isInputValid) {
+      setState(() {
+        _isInputValid = isValid;
+      });
+    }
+  }
 
   Future<void> _submitPhone() async {
     final phone = _phoneCtrl.text.trim();
@@ -27,6 +52,21 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
             style: GoogleFonts.plusJakartaSans(color: Colors.white),
           ),
           backgroundColor: AppTheme.dangerColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    if (!_isDpdpAgreed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please agree to the DPDP guidelines to proceed',
+            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+          ),
+          backgroundColor: AppTheme.warningColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -49,218 +89,261 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
 
   @override
   void dispose() {
+    _phoneCtrl.removeListener(_validateInput);
     _phoneCtrl.dispose();
+    _phoneFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.primaryColor,
-              AppTheme.secondaryColor,
-            ],
-          ),
-        ),
+      backgroundColor: AppTheme.backgroundColor, // Soft light mint background
+      body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               physics: const ClampingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
+                  minHeight: constraints.maxHeight - 32, // adjust for padding
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Top Branding Section
-                    Padding(
-                      padding: const EdgeInsets.only(top: 80, bottom: 40, left: 24, right: 24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Glowing circle with medical cross icon
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.2),
-                                  Colors.white.withValues(alpha: 0.05),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.accentColor.withValues(alpha: 0.4),
-                                  blurRadius: 30,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.add_rounded,
-                                size: 54,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          Text(
-                            'Prescription Reader',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Smart medication management',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Bottom Card (Takes about 40% height/content-based)
-                    Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(32),
-                          topRight: Radius.circular(32),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 20,
-                            offset: Offset(0, -5),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 36.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Welcome',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Enter your mobile number to get started',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          
-                          // Custom styled Input Field
-                          SizedBox(
-                            height: 56,
-                            child: TextField(
-                              controller: _phoneCtrl,
-                              keyboardType: TextInputType.phone,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                    // Top Header Row (Logo)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        // Left Logo (Clean flat rectangular badge + Rx Reader + Tagline)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
                                 color: AppTheme.primaryColor,
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              decoration: InputDecoration(
-                                hintText: 'Mobile number',
-                                hintStyle: GoogleFonts.plusJakartaSans(
-                                  color: Colors.grey.shade400,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                prefixIcon: Container(
-                                  padding: const EdgeInsets.only(left: 20, right: 12),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '+91',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Container(
-                                        width: 1.5,
-                                        height: 20,
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ],
+                              child: const Icon(
+                                Icons.link_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Prescription Reader',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: const Color(0xFF1E293B),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                              ),
+                                Text(
+                                  'by StaplerLabs',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    // Main Middle Section
+                    Column(
+                      children: [
+                        const SizedBox(height: 32),
+                        // Pulsing, Glowing Concentric Signal Smartphone Graphic
+                        const _GlowingPhoneGraphic(),
+                        const SizedBox(height: 24),
+                        
+                        // Title
+                        Text(
+                          'Enter your phone number',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: const Color(0xFF0F172A),
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
                           ),
-                          const SizedBox(height: 24),
-                          
-                          // Gradient Button
-                          GradientButton(
-                            text: 'Get Started →',
-                            onPressed: _submitPhone,
-                            isLoading: _isLoading,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Subtitle
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            "We'll send your medication reminders to this WhatsApp number",
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              height: 1.4,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 24),
-                          
-                          // DPDP Disclaimer
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.lock_outline_rounded,
-                                size: 14,
-                                color: Colors.grey,
+                        ),
+                        const SizedBox(height: 36),
+
+                        // Tactile 3D Elevated Mobile Input Container (Focus border detection)
+                        Container(
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _isPhoneFocused 
+                                  ? AppTheme.primaryColor 
+                                  : Colors.grey.shade200, 
+                              width: _isPhoneFocused ? 1.8 : 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _isPhoneFocused
+                                    ? AppTheme.primaryColor.withValues(alpha: 0.05)
+                                    : Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
-                              const SizedBox(width: 6),
+                              const BoxShadow(
+                                color: Colors.white,
+                                blurRadius: 4,
+                                offset: Offset(-2, -2),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 18),
                               Text(
-                                'Your data is protected under DPDP Act 2023',
+                                '+91',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                width: 1.2,
+                                height: 24,
+                                color: Colors.grey.shade200,
+                              ),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: TextField(
+                                  controller: _phoneCtrl,
+                                  focusNode: _phoneFocusNode,
+                                  keyboardType: TextInputType.phone,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: '98765 XXXXX',
+                                    hintStyle: GoogleFonts.plusJakartaSans(
+                                      color: Colors.grey.shade400,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    filled: false, // Ensure no background fill on focus
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // DPDP Consent Checkbox Card (glowing borders)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _isDpdpAgreed 
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.4) 
+                                  : Colors.grey.shade200, 
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _isDpdpAgreed 
+                                    ? AppTheme.primaryColor.withValues(alpha: 0.05) 
+                                    : Colors.black.withValues(alpha: 0.01),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Checkbox(
+                                  value: _isDpdpAgreed,
+                                  onChanged: (bool? val) {
+                                    setState(() {
+                                      _isDpdpAgreed = val ?? false;
+                                    });
+                                  },
+                                  activeColor: AppTheme.primaryColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'I agree to data collection under DPDP guidelines. Your data stays private and is never sold.',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF334155),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Bottom Continue CTA (using our Premium GradientButton, always active)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 32),
+                        GradientButton(
+                          text: 'Continue',
+                          onPressed: _isLoading ? null : _submitPhone, // Always active
+                          isLoading: _isLoading,
+                          icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                     ),
                   ],
                 ),
@@ -269,6 +352,112 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _GlowingPhoneGraphic extends StatefulWidget {
+  const _GlowingPhoneGraphic();
+
+  @override
+  State<_GlowingPhoneGraphic> createState() => _GlowingPhoneGraphicState();
+}
+
+class _GlowingPhoneGraphicState extends State<_GlowingPhoneGraphic>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return SizedBox(
+          width: 160,
+          height: 160,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Concentric Pulsing Ripples (3 stages)
+              ...List.generate(3, (index) {
+                final double progress = (_controller.value + (index / 3.0)) % 1.0;
+                final double size = 60 + (progress * 90);
+                final double opacity = (1.0 - progress) * 0.22;
+                return Container(
+                  width: size,
+                  height: size,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: opacity),
+                      width: 1.8,
+                    ),
+                  ),
+                );
+              }),
+
+              // 3D Elevated Graphic Hub
+              Container(
+                width: 78,
+                height: 78,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Center(
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.phone_android_rounded,
+                      size: 26,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

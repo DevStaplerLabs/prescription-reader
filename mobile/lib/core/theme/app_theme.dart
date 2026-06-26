@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0A2463); // Deep Blue
-  static const Color secondaryColor = Color(0xFF1B4FE4); // Royal Blue for gradient
-  static const Color accentColor = Color(0xFF00B4D8);  // Vibrant Teal
-  static const Color successColor = Color(0xFF06D6A0); // Success green
-  static const Color warningColor = Color(0xFFFFB703); // Warning yellow
-  static const Color dangerColor = Color(0xFFEF233C);  // Danger red
-  static const Color backgroundColor = Color(0xFFF0F4F8); // Light grey/blue background
+  static const Color primaryColor = Color(0xFF00B894); // Teal/Mint Primary
+  static const Color secondaryColor = Color(0xFF00A381); // Dark Teal/Mint for Headers
+  static const Color accentColor = Color(0xFF00B894);  // Accent Mint
+  static const Color successColor = Color(0xFF00B894); // Success/Taken Mint
+  static const Color warningColor = Color(0xFFEAA011); // Warning Orange/Yellow
+  static const Color dangerColor = Color(0xFFE25C6E);  // Danger Red/Pink
+  static const Color backgroundColor = Color(0xFFE8FBF5); // Primary Light Mint background
   static const Color cardColor = Colors.white;
 
   static List<BoxShadow> get premiumShadow => [
         BoxShadow(
-          color: const Color(0xFF0A2463).withValues(alpha: 0.08),
+          color: const Color(0xFF00B894).withValues(alpha: 0.08),
           offset: const Offset(0, 4),
           blurRadius: 20,
           spreadRadius: 0,

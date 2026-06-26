@@ -45,3 +45,6 @@ This document tracks the technical compromises made to accelerate the developmen
 * **Current Approach:** Store prescription records and texts indefinitely.
 * **Trade-off:** Non-compliant with the "Right to be Forgotten" and storage limitation principles under modern privacy laws.
 * **Production Fix:** Implement automatic TTL (Time-To-Live) indexes in MongoDB to purge/anonymize health records after a specified period or when the user requests account deletion.
+
+
+C:\Users\ASUS\flutter\bin\flutter.bat run -d chrome --web-port=5556

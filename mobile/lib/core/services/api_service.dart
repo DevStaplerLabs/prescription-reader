@@ -14,13 +14,30 @@ class ApiService {
 
     // MOCK RESPONSE
     return {
-      'rawOcrText': 'Dr. Smith\nAmoxicillin 500mg\nTake 1 tablet every 8 hours\nFor 7 days',
-      'extractedData': {
-        'drugName': 'Amoxicillin',
-        'dosage': '500mg',
-        'frequency': 'Every 8 hours',
-        'durationDays': 7,
-      }
+      'rawOcrText': 'Rx\nParacetamol 500mg - 3x/day for 5 days after food\nAzithromycin 250mg - 1x/day for 3 days before food\nCetrizine 10mg - 1x/day at Night with water',
+      'extractedMedicines': [
+        {
+          'drugName': 'Paracetamol',
+          'dosage': '500mg',
+          'frequency': '3×/day',
+          'durationDays': 5,
+          'instruction': 'After food',
+        },
+        {
+          'drugName': 'Azithromycin',
+          'dosage': '250mg',
+          'frequency': '1×/day',
+          'durationDays': 3,
+          'instruction': 'Before food',
+        },
+        {
+          'drugName': 'Cetrizine',
+          'dosage': '10mg',
+          'frequency': '1×/day',
+          'durationDays': 'Night',
+          'instruction': 'With water',
+        }
+      ]
     };
   }
 
@@ -35,16 +52,26 @@ class ApiService {
   final List<Map<String, dynamic>> _mockSchedules = [
     {
       'id': '1',
-      'drugName': 'Amoxicillin',
+      'drugName': 'Paracetamol',
       'dosage': '500mg',
-      'time': '08:00 AM',
-      'status': 'pending', // taken, missed, snoozed, pending
+      'time': 'Morning',
+      'instruction': 'After food',
+      'status': 'taken', // taken, missed, snoozed, pending
     },
     {
       'id': '2',
-      'drugName': 'Ibuprofen',
-      'dosage': '200mg',
-      'time': '02:00 PM',
+      'drugName': 'Azithromycin',
+      'dosage': '250mg',
+      'time': 'Morning',
+      'instruction': 'Before food',
+      'status': 'pending',
+    },
+    {
+      'id': '3',
+      'drugName': 'Cetrizine',
+      'dosage': '10mg',
+      'time': 'Night',
+      'instruction': 'With water',
       'status': 'pending',
     }
   ];

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_theme.dart';
 
 class ConsentScreen extends StatefulWidget {
   const ConsentScreen({super.key});
@@ -30,7 +31,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.privacy_tip_outlined, size: 60, color: Colors.blue),
+              const Icon(Icons.privacy_tip_outlined, size: 60, color: AppTheme.primaryColor),
               const SizedBox(height: 24),
               const Text(
                 'Before we scan your prescription...',
@@ -45,9 +46,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                 ),
                 child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
