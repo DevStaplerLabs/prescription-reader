@@ -7,7 +7,7 @@ This document outlines the step-by-step plan for developing the Node.js backend 
 - **Database:** MongoDB (using Mongoose ODM)
 - **OCR:** Google Cloud Vision API (`DOCUMENT_TEXT_DETECTION`)
 - **NLP / Parsing:** Rule-based Regex and/or LLM endpoint
-- **Notifications:** Firebase Admin SDK (FCM) + WhatsApp Business API integration
+- **Notifications:** WhatsApp Business API integration
 - **Job Scheduler:** `node-cron` or `bullmq`
 
 ---
@@ -41,24 +41,25 @@ This document outlines the step-by-step plan for developing the Node.js backend 
   - `POST /api/prescriptions/parse` — Receives image, triggers OCR + Gemini Vision parsing, returns structured JSON representation to the client for validation.
   - `POST /api/prescriptions/confirm` — Receives validated JSON from user, saves `Prescription` and `Schedule` records.
 
-### Step 4 — Reminders & Adherence Logs
-- [ ] Design adherence schema (`src/models/AdherenceLog.js`):
-  - Fields: `scheduleId`, `medicationName`, `scheduledTime`, `status` (`taken` / `missed` / `snoozed`), `loggedAt`.
+### Step 4 — Reminders & Scheduler
 - [ ] Implement notification service (`src/services/notificationService.js`):
-  - Integrates with `firebase-admin` to send push notifications to registered FCM tokens.
   - Integrates with WhatsApp Business API to dispatch messaging reminders.
 - [ ] Implement cron job scheduler (`src/jobs/reminderJob.js`):
   - Set up a cron task running every minute (or every 5-15 mins).
-  - Checks for medications scheduled within the current window and triggers WhatsApp/FCM alerts.
-- [ ] Create routes:
-  - `POST /api/adherence/log` — Updates adherence status when a user marks a dose.
+  - Checks for medications scheduled within the current window and triggers WhatsApp alerts.
 
 ### Step 5 — Polish & Testing
 - [ ] Create history routes:
   - `GET /api/prescriptions` — Retrieve all past prescriptions.
   - `GET /api/schedules/active` — Get the currently active medication schedule.
-- [ ] Implement centralized error-handling middleware.
+- [x] Implement centralized error-handling middleware (configured in `server.js`).
 - [ ] Conduct local integration testing using tools like Postman/Insomnia.
+
+### Step 6 — Adherence Logs (To be completed last)
+- [ ] Design adherence schema (`src/models/AdherenceLog.js`):
+  - Fields: `scheduleId`, `medicationName`, `scheduledTime`, `status` (`taken` / `missed` / `snoozed`), `loggedAt`.
+- [ ] Create routes:
+  - `POST /api/adherence/log` — Updates adherence status when a user marks a dose.
 
 ---
 
