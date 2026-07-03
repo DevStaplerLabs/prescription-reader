@@ -67,7 +67,7 @@ export const checkAndSendReminders = async () => {
             med.drugName,
             dosage,
             currentTimeStr,
-            'hello_world'
+            'medication_reminder'
           );
         } catch (err) {
           console.error(`[Reminder Job] Failed to send reminder for ${med.drugName} to ${patientPhone}:`, err.message);
