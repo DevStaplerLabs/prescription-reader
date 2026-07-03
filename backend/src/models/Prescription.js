@@ -34,6 +34,7 @@ const patientSchema = new mongoose.Schema({
   name: { type: String, default: null },
   age: { type: Number, default: null },
   gender: { type: String, enum: ['M', 'F', 'O', null], default: null },
+  phone: { type: String, default: null },
 });
 
 const prescriptionSchema = new mongoose.Schema(

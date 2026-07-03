@@ -112,6 +112,7 @@ export const confirmPrescription = async (req, res, next) => {
     // Create the new schedule
     const schedule = new Schedule({
       prescriptionId: prescription._id,
+      patientPhone: parsedData.patient?.phone || null,
       medications: scheduleData.medications,
       advice: scheduleData.advice,
       followUp: scheduleData.followUp,

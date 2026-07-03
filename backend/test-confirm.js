@@ -10,7 +10,8 @@ const payload = JSON.stringify({
     patient: {
       name: "Sachin Sansare",
       age: 28,
-      gender: "M"
+      gender: "M",
+      phone: "918178243681"
     },
     medications: [
       {

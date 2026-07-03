@@ -23,6 +23,7 @@ const scheduleSchema = new mongoose.Schema(
       ref: 'Prescription',
       required: true,
     },
+    patientPhone: { type: String, default: null },
     medications: [scheduledMedicationSchema],
     advice: [{ type: String }],
     appointments: [{ type: Date }],
