@@ -86,16 +86,70 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     try {
       final apiService = ref.read(apiServiceProvider);
       
-      for (var form in _forms) {
-        final payload = {
-          'drugName': form.drugName.text,
-          'dosage': form.dosage.text,
-          'frequency': form.frequency.text,
-          'durationDays': form.duration.text,
-          'instruction': form.instruction.text,
+      // Build the medications list from the form values
+      final List<Map<String, dynamic>> medications = _forms.map((form) {
+        // Parse frequency (e.g. "1-0-1" or "1-1-1")
+        final freqText = form.frequency.text.trim();
+        final freqParts = freqText.split('-');
+        final frequencyMap = {
+          'morning': 0,
+          'afternoon': 0,
+          'night': 0,
         };
-        await apiService.saveSchedule(payload);
-      }
+        if (freqParts.length == 3) {
+          frequencyMap['morning'] = int.tryParse(freqParts[0]) ?? 0;
+          frequencyMap['afternoon'] = int.tryParse(freqParts[1]) ?? 0;
+          frequencyMap['night'] = int.tryParse(freqParts[2]) ?? 0;
+        } else {
+          // simple fallback logic
+          if (freqText.toLowerCase().contains('morning') || freqText == '1') {
+            frequencyMap['morning'] = 1;
+          }
+          if (freqText.toLowerCase().contains('night')) {
+            frequencyMap['night'] = 1;
+          }
+        }
+
+        // Parse duration (e.g. "5")
+        final durationValue = int.tryParse(form.duration.text) ?? 5;
+
+        // Parse instruction (e.g. "Before food")
+        final instLower = form.instruction.text.toLowerCase();
+        String mealInstruction = 'after';
+        if (instLower.contains('before') || instLower.contains('pre')) {
+          mealInstruction = 'before';
+        } else if (instLower.contains('with')) {
+          mealInstruction = 'with';
+        }
+
+        return {
+          'drugName': form.drugName.text,
+          'form': 'Tab', // default form for now
+          'dosage': form.dosage.text,
+          'frequency': frequencyMap,
+          'duration': {
+            'value': durationValue,
+            'unit': 'days',
+          },
+          'mealInstruction': mealInstruction,
+          'route': 'oral',
+          'specialInstructions': null,
+        };
+      }).toList();
+
+      // Original parsedData contains clinic/doctor/patient fields
+      final originalParsedData = widget.ocrData['parsedData'] as Map<String, dynamic>? ?? {};
+
+      // Merge user edits back into the parsedData
+      final Map<String, dynamic> mergedParsedData = Map.from(originalParsedData);
+      mergedParsedData['medications'] = medications;
+
+      final confirmPayload = {
+        'rawOcrText': widget.ocrData['rawOcrText'] ?? '',
+        'parsedData': mergedParsedData,
+      };
+      
+      await apiService.confirmPrescription(confirmPayload);
       
       ref.invalidate(schedulesProvider);
       

@@ -1,95 +1,177 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../constants/app_constants.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 class ApiService {
-  // ignore: unused_field
   final Dio _dio = Dio();
 
-  // Mock method to upload image and return parsed OCR text
+  // In-memory store for dose adherence statuses (e.g. 'taken', 'missed', 'snoozed')
+  final Map<String, String> _adherenceStore = {};
+
+  // Upload image and return parsed OCR text along with structured data
   Future<Map<String, dynamic>> uploadPrescription(String filePath) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final fileName = filePath.split('/').last;
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+        ),
+      });
 
-    // MOCK RESPONSE
-    return {
-      'rawOcrText': 'Rx\nParacetamol 500mg - 3x/day for 5 days after food\nAzithromycin 250mg - 1x/day for 3 days before food\nCetrizine 10mg - 1x/day at Night with water',
-      'extractedMedicines': [
-        {
-          'drugName': 'Paracetamol',
-          'dosage': '500mg',
-          'frequency': '3×/day',
-          'durationDays': 5,
-          'instruction': 'After food',
-        },
-        {
-          'drugName': 'Azithromycin',
-          'dosage': '250mg',
-          'frequency': '1×/day',
-          'durationDays': 3,
-          'instruction': 'Before food',
-        },
-        {
-          'drugName': 'Cetrizine',
-          'dosage': '10mg',
-          'frequency': '1×/day',
-          'durationDays': 'Night',
-          'instruction': 'With water',
+      final response = await _dio.post(
+        '${AppConstants.baseUrl}${AppConstants.parseEndpoint}',
+        data: formData,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final apiResponse = response.data as Map<String, dynamic>;
+        if (apiResponse['status'] == 'success') {
+          final data = apiResponse['data'] as Map<String, dynamic>;
+          final parsedData = data['parsedData'] as Map<String, dynamic>? ?? {};
+          final backendMeds = parsedData['medications'] as List<dynamic>? ?? [];
+
+          // Map to the format the frontend expects
+          final extractedMedicines = backendMeds.map((med) {
+            // Helper to format frequency map into a string like "1-0-1"
+            final freq = med['frequency'] as Map<String, dynamic>?;
+            String freqStr = '1-0-1'; // fallback
+            if (freq != null) {
+              freqStr = '${freq['morning'] ?? 0}-${freq['afternoon'] ?? 0}-${freq['night'] ?? 0}';
+            }
+
+            // Duration value
+            final duration = med['duration'] as Map<String, dynamic>?;
+            String durationDays = '5'; // fallback
+            if (duration != null) {
+              final val = duration['value'];
+              final unit = duration['unit']?.toString() ?? 'days';
+              if (unit == 'weeks') {
+                durationDays = ((int.tryParse(val.toString()) ?? 1) * 7).toString();
+              } else if (unit == 'months') {
+                durationDays = ((int.tryParse(val.toString()) ?? 1) * 30).toString();
+              } else {
+                durationDays = val.toString();
+              }
+            }
+
+            // Meal instruction formatting
+            final meal = med['mealInstruction']?.toString() ?? '';
+            String instruction = 'After food';
+            if (meal == 'before') {
+              instruction = 'Before food';
+            } else if (meal == 'with') {
+              instruction = 'With food';
+            }
+
+            return {
+              'drugName': med['drugName']?.toString() ?? '',
+              'dosage': med['dosage']?.toString() ?? '',
+              'frequency': freqStr,
+              'durationDays': durationDays,
+              'instruction': instruction,
+            };
+          }).toList();
+
+          return {
+            'rawOcrText': data['rawOcrText'] ?? '',
+            'extractedMedicines': extractedMedicines,
+            'parsedData': parsedData, // Store the original parsedData for confirming
+          };
         }
-      ]
-    };
-  }
-
-  // Mock method to save the schedule
-  Future<bool> saveSchedule(Map<String, dynamic> scheduleData) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-    return true; // Successfully saved
-  }
-
-  // Local state to simulate database
-  final List<Map<String, dynamic>> _mockSchedules = [
-    {
-      'id': '1',
-      'drugName': 'Paracetamol',
-      'dosage': '500mg',
-      'time': 'Morning',
-      'instruction': 'After food',
-      'status': 'taken', // taken, missed, snoozed, pending
-    },
-    {
-      'id': '2',
-      'drugName': 'Azithromycin',
-      'dosage': '250mg',
-      'time': 'Morning',
-      'instruction': 'Before food',
-      'status': 'pending',
-    },
-    {
-      'id': '3',
-      'drugName': 'Cetrizine',
-      'dosage': '10mg',
-      'time': 'Night',
-      'instruction': 'With water',
-      'status': 'pending',
+      }
+      throw Exception(response.data?['message'] ?? 'Failed to parse prescription');
+    } catch (e) {
+      throw Exception('API Error: $e');
     }
-  ];
+  }
 
-  // Mock method to get active schedules
+  // Save the complete schedule by sending confirmed prescription data to the backend
+  Future<bool> confirmPrescription(Map<String, dynamic> confirmPayload) async {
+    try {
+      final response = await _dio.post(
+        '${AppConstants.baseUrl}${AppConstants.uploadEndpoint.replaceAll('/upload', '/confirm')}',
+        data: confirmPayload,
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      throw Exception('API Confirm Error: $e');
+    }
+  }
+
+  // Get active schedules from database
   Future<List<Map<String, dynamic>>> getActiveSchedules() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return _mockSchedules;
+    try {
+      final response = await _dio.get('${AppConstants.baseUrl}${AppConstants.activeSchedulesEndpoint}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        final apiResponse = response.data as Map<String, dynamic>;
+        if (apiResponse['status'] == 'success') {
+          final data = apiResponse['data'] as Map<String, dynamic>? ?? {};
+          final schedule = data['schedule'] as Map<String, dynamic>?;
+          if (schedule == null) {
+            return [];
+          }
+
+          final medications = schedule['medications'] as List<dynamic>? ?? [];
+          final flatList = <Map<String, dynamic>>[];
+
+          for (var med in medications) {
+            final drugName = med['drugName']?.toString() ?? 'Unknown';
+            final dosage = med['dosage']?.toString() ?? '';
+            final times = med['scheduledTimes'] as List<dynamic>? ?? [];
+            final meal = med['mealInstruction']?.toString() ?? 'after';
+            String mealInst = 'After food';
+            if (meal == 'before') mealInst = 'Before food';
+            if (meal == 'with') mealInst = 'With food';
+
+            for (var t in times) {
+              final timeStr = t.toString();
+              String timeGroup = 'Morning';
+              if (timeStr == '08:00') {
+                timeGroup = 'Morning';
+              } else if (timeStr == '14:00') {
+                timeGroup = 'Afternoon';
+              } else if (timeStr == '21:00') {
+                timeGroup = 'Night';
+              }
+
+              // Create a unique key for tracking adherence state of this specific dose
+              final doseId = '${med['_id']}_$timeStr';
+              final status = _adherenceStore[doseId] ?? 'pending';
+
+              flatList.add({
+                'id': doseId,
+                'drugName': drugName,
+                'dosage': dosage,
+                'time': timeGroup,
+                'instruction': mealInst,
+                'status': status,
+              });
+            }
+          }
+
+          return flatList;
+        }
+      }
+      return [];
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 404) {
+        return []; // 404 is standard when there is no active schedule in the DB
+      }
+      throw Exception('API Active Schedules Error: $e');
+    }
   }
 
-  // Mock method to log adherence
+  // Log adherence in memory for mock simulation
   Future<bool> logAdherence(String id, String newStatus) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final index = _mockSchedules.indexWhere((s) => s['id'] == id);
-    if (index != -1) {
-      _mockSchedules[index]['status'] = newStatus;
-      return true;
-    }
-    return false;
+    _adherenceStore[id] = newStatus;
+    return true;
   }
 }
