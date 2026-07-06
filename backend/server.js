@@ -8,12 +8,16 @@ import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import prescriptionRouter from './src/routes/prescription.js';
 import scheduleRouter from './src/routes/schedule.js';
+import { initReminderJob } from './src/jobs/reminderJob.js';
 
 // Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize background jobs
+initReminderJob();
 
 const app = express();
 

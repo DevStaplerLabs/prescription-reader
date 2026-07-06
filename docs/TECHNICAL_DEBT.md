@@ -32,6 +32,12 @@ This document tracks the technical compromises made to accelerate the developmen
 * **Trade-off:** Highly fragile. Any slight spelling mistake, layout variation, or handwritten text will cause parsing to fail or misidentify medications.
 * **Production Fix:** Integrate a clinical LLM endpoint (like Gemini Pro or OpenAI GPT-4o) with structured JSON schemas, or use a dedicated medical entity recognition tool (like AWS Comprehend Medical).
 
+### Polling Scheduler (node-cron) vs. Event-Driven Job Queue
+* **Current Approach:** Use `node-cron` to poll MongoDB every minute for active schedules matching the current time slot.
+* **Trade-off:** Resource inefficient. The backend queries the database every minute regardless of whether there are actual reminders to send. Does not scale well as the number of users and active schedules grows.
+* **Production Fix:** Transition to a dedicated, event-driven message queue/scheduler (such as **BullMQ** backed by **Redis**, or cloud solutions like **Google Cloud Tasks**). When a prescription schedule is confirmed, schedule a single delayed job to execute at the exact reminder timestamp, eliminating database polling entirely.
+
+
 ---
 
 ## 3. Privacy & Compliance (DPDP Act 2023 / HIPAA)
