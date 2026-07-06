@@ -1,4 +1,4 @@
-import { sendWhatsAppTemplate } from '../src/services/notificationService.js';
+import { sendMedicationReminder } from '../src/services/notificationService.js';
 
 const runTest = async () => {
   const recipient = process.argv[2];
@@ -10,14 +10,19 @@ const runTest = async () => {
     process.exit(1);
   }
 
-  console.log(`Starting WhatsApp notification test targeting: ${recipient}...`);
+  console.log(`Starting WhatsApp medication reminder test targeting: ${recipient}...`);
 
   try {
-    // Send the default "hello_world" template which has no parameters and works instantly in sandbox
-    const response = await sendWhatsAppTemplate(recipient, 'hello_world');
+    const response = await sendMedicationReminder(
+      recipient,
+      'John Doe',          // patientName ({{1}})
+      'Amoxicillin 500mg', // drugName ({{2}})
+      '1 capsule',         // dosage ({{3}})
+      '08:00 AM'           // scheduledTime ({{4}})
+    );
     console.log('\n--- Success! ---');
     console.log(JSON.stringify(response, null, 2));
-    console.log('Check your WhatsApp app on your phone. You should have received a hello world message.');
+    console.log('Check your WhatsApp app on your phone. You should have received the medication reminder.');
   } catch (error) {
     console.error('\n--- Test Failed ---');
     console.error(error.message);
