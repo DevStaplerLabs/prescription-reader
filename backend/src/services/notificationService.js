@@ -14,7 +14,7 @@ const API_VERSION = 'v25.0';
  * @param {string} [languageCode="en_US"] - The language code of the template.
  * @returns {Promise<object>} The API response data.
  */
-export const sendWhatsAppTemplate = async (to, templateName, components = [], languageCode = 'en_US') => {
+export const sendWhatsAppTemplate = async (to, templateName, components = [], languageCode = 'en') => {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
@@ -44,7 +44,7 @@ export const sendWhatsAppTemplate = async (to, templateName, components = [], la
     payload.template.components = components;
   }
 
-  console.log(`[WhatsApp Service] Sending template "${templateName}" to ${cleanTo}...`);
+  console.log(`[WhatsApp Service] Sending template "${templateName}" to ${cleanTo} using language code "${languageCode}"...`);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -74,9 +74,9 @@ export const sendWhatsAppTemplate = async (to, templateName, components = [], la
  * @param {string} drugName - Name of the medication.
  * @param {string} dosage - Dosage details (e.g. "1 tablet", "5ml").
  * @param {string} scheduledTime - Time of the scheduled dose (e.g. "08:00 AM").
- * @param {string} [templateName="hello_world"] - Template name (defaults to "hello_world" for sandbox testing).
+ * @param {string} [templateName="medication_reminder"] - Template name.
  */
-export const sendMedicationReminder = async (to, patientName, drugName, dosage, scheduledTime, templateName = 'hello_world') => {
+export const sendMedicationReminder = async (to, patientName, drugName, dosage, scheduledTime, templateName = 'medication_reminder') => {
   // If we are using the default "hello_world" template, it does not support variables/components.
   // For custom templates, we configure components. E.g. body parameters:
   let components = [];
