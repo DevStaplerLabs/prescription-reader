@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,39 +22,12 @@ final historySchedulesProvider = FutureProvider.autoDispose<List<Map<String, dyn
   return apiService.getHistorySchedules(phone);
 });
 
-// Riverpod Provider to fetch and cache active schedules using Stale-While-Revalidate (SWR) with Streams
-final schedulesProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) async* {
+// Riverpod Provider to fetch active schedules — simple FutureProvider that always fetches fresh
+final schedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final storage = ref.read(storageServiceProvider);
   final apiService = ref.read(apiServiceProvider);
   final phone = await storage.read('phone_number') as String? ?? '';
-
-  // 1. Immediately yield cached data if available
-  final cachedJson = await storage.read('cached_schedules') as String?;
-  if (cachedJson != null) {
-    try {
-      final List<dynamic> parsed = jsonDecode(cachedJson);
-      final List<Map<String, dynamic>> cachedList =
-          parsed.map((e) => Map<String, dynamic>.from(e)).toList();
-      yield cachedList;
-    } catch (_) {
-      // Ignore cache parse errors
-    }
-  }
-
-  // 2. Fetch fresh data from backend
-  try {
-    final freshList = await apiService.getActiveSchedules(phone);
-
-    // 3. Update the local cache
-    await storage.save('cached_schedules', jsonEncode(freshList));
-
-    yield freshList;
-  } catch (e) {
-    // If we have no cached data, rethrow the error so the UI shows the error state
-    if (cachedJson == null) {
-      rethrow;
-    }
-  }
+  return apiService.getActiveSchedules(phone);
 });
 
 class HomeScreen extends ConsumerWidget {
@@ -190,6 +162,8 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(schedulesProvider);
           ref.invalidate(historySchedulesProvider);
+          // Wait for provider to rebuild
+          await ref.read(schedulesProvider.future).catchError((_) => <Map<String, dynamic>>[]);
         },
         child: schedulesAsyncValue.when(
           data: (schedules) {
@@ -855,6 +829,7 @@ class HomeScreen extends ConsumerWidget {
         Navigator.pop(context); // Close sheet
         final apiService = ref.read(apiServiceProvider);
         await apiService.logAdherence(scheduleId, status);
+        // Invalidate to rebuild with new in-memory status
         ref.invalidate(schedulesProvider);
       },
     );
