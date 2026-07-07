@@ -1,27 +1,191 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 
-// Riverpod Provider to fetch active schedules
-final schedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+// Riverpod Provider to load the user's name
+final userNameProvider = FutureProvider.autoDispose<String>((ref) async {
+  final storage = ref.read(storageServiceProvider);
+  final name = await storage.read('user_name') as String?;
+  return name ?? 'User';
+});
+
+// Riverpod Provider to fetch historical inactive schedules
+final historySchedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final apiService = ref.read(apiServiceProvider);
-  return apiService.getActiveSchedules();
+  final storage = ref.read(storageServiceProvider);
+  final phone = await storage.read('phone_number') as String? ?? '';
+  if (phone.isEmpty) return [];
+  return apiService.getHistorySchedules(phone);
+});
+
+// Riverpod Provider to fetch and cache active schedules using Stale-While-Revalidate (SWR) with Streams
+final schedulesProvider = StreamProvider.autoDispose<List<Map<String, dynamic>>>((ref) async* {
+  final storage = ref.read(storageServiceProvider);
+  final apiService = ref.read(apiServiceProvider);
+  final phone = await storage.read('phone_number') as String? ?? '';
+
+  // 1. Immediately yield cached data if available
+  final cachedJson = await storage.read('cached_schedules') as String?;
+  if (cachedJson != null) {
+    try {
+      final List<dynamic> parsed = jsonDecode(cachedJson);
+      final List<Map<String, dynamic>> cachedList =
+          parsed.map((e) => Map<String, dynamic>.from(e)).toList();
+      yield cachedList;
+    } catch (_) {
+      // Ignore cache parse errors
+    }
+  }
+
+  // 2. Fetch fresh data from backend
+  try {
+    final freshList = await apiService.getActiveSchedules(phone);
+
+    // 3. Update the local cache
+    await storage.save('cached_schedules', jsonEncode(freshList));
+
+    yield freshList;
+  } catch (e) {
+    // If we have no cached data, rethrow the error so the UI shows the error state
+    if (cachedJson == null) {
+      rethrow;
+    }
+  }
 });
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  String _getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good Afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good Evening';
+    } else {
+      return 'Good Night';
+    }
+  }
+
+  Future<void> _confirmDiscontinue(BuildContext context, WidgetRef ref, String scheduleId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Discontinue Schedule?',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'Are you sure you want to discontinue all current medications? This will clear the active schedule and stop reminders.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerColor,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Discontinue',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      try {
+        final apiService = ref.read(apiServiceProvider);
+        await apiService.deactivateActiveSchedule(scheduleId);
+        ref.invalidate(schedulesProvider);
+        ref.invalidate(historySchedulesProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Active schedule discontinued.', style: GoogleFonts.plusJakartaSans()),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to discontinue: $e', style: GoogleFonts.plusJakartaSans()),
+              backgroundColor: AppTheme.dangerColor,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _restorePastSchedule(BuildContext context, WidgetRef ref, String scheduleId) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final storage = ref.read(storageServiceProvider);
+      final phone = await storage.read('phone_number') as String? ?? '';
+
+      if (phone.isEmpty) {
+        throw Exception('User phone number not found.');
+      }
+
+      final success = await apiService.restoreSchedule(scheduleId, phone);
+      if (success) {
+        ref.invalidate(schedulesProvider);
+        ref.invalidate(historySchedulesProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Schedule restored successfully!', style: GoogleFonts.plusJakartaSans()),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Restoration failed.');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to restore: $e', style: GoogleFonts.plusJakartaSans()),
+            backgroundColor: AppTheme.dangerColor,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final schedulesAsyncValue = ref.watch(schedulesProvider);
+    final userNameAsync = ref.watch(userNameProvider);
+    final userName = userNameAsync.value ?? 'User';
 
     return Scaffold(
       body: RefreshIndicator(
         color: AppTheme.primaryColor,
         onRefresh: () async {
           ref.invalidate(schedulesProvider);
+          ref.invalidate(historySchedulesProvider);
         },
         child: schedulesAsyncValue.when(
           data: (schedules) {
@@ -49,43 +213,230 @@ class HomeScreen extends ConsumerWidget {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 28.0, bottom: 8.0),
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Good Morning, Ayush 👋',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_getTimeBasedGreeting()}, $userName 👋',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _getTodayDateString().toUpperCase(),
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade600,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _getTodayDateString().toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
-                            letterSpacing: 1.0,
+                        if (schedules.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.cancel_presentation_outlined, color: AppTheme.dangerColor),
+                            tooltip: 'Discontinue Schedule',
+                            onPressed: () => _confirmDiscontinue(
+                              context,
+                              ref,
+                              schedules.first['scheduleId'] as String,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
                 ),
 
                 // Grouped Cards List (Neumorphic floating cards)
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final timeGroup = grouped.keys.toList()[index];
-                      final list = grouped[timeGroup]!;
-                      return _buildGroupedCard(context, ref, timeGroup, list);
-                    },
-                    childCount: grouped.keys.length,
+                if (schedules.isNotEmpty)
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final timeGroup = grouped.keys.toList()[index];
+                        final list = grouped[timeGroup]!;
+                        return _buildGroupedCard(context, ref, timeGroup, list);
+                      },
+                      childCount: grouped.keys.length,
+                    ),
                   ),
-                ),
+                
+                // Empty state and Past Schedule History list
+                if (schedules.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
+                            ),
+                            child: Column(
+                              children: [
+                                const Text(
+                                  '🧘',
+                                  style: TextStyle(fontSize: 48),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No active medications',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Scan a new prescription to start or restore a past one below.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          Text(
+                            'Previous Prescriptions',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ref.watch(historySchedulesProvider).when(
+                            data: (history) {
+                              if (history.isEmpty) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                                  child: Center(
+                                    child: Text(
+                                      'No prescription history found.',
+                                      style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: history.length,
+                                itemBuilder: (context, index) {
+                                  final pastSchedule = history[index];
+                                  final extData = pastSchedule['prescriptionId']?['extractedData'];
+                                  final clinic = extData?['clinicName'] ?? 'Clinic';
+                                  final doctor = extData?['doctorName'] ?? 'Doctor';
+                                  final meds = pastSchedule['medications'] as List<dynamic>? ?? [];
+
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.grey.shade100),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.02),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '$clinic — Dr. $doctor',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: const Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${meds.length} medication(s)',
+                                                style: GoogleFonts.plusJakartaSans(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () => _restorePastSchedule(
+                                            context,
+                                            ref,
+                                            pastSchedule['_id'] as String,
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.primaryColor,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          ),
+                                          child: Text(
+                                            'Restore',
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            loading: () => const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24.0),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                ),
+                              ),
+                            ),
+                            error: (err, _) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 24.0),
+                              child: Center(
+                                child: Text(
+                                  'Error loading history: $err',
+                                  style: GoogleFonts.plusJakartaSans(color: AppTheme.dangerColor),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 
                 const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],

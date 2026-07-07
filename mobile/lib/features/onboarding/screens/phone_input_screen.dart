@@ -16,25 +16,35 @@ class PhoneInputScreen extends ConsumerStatefulWidget {
 class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
   final TextEditingController _phoneCtrl = TextEditingController();
   final FocusNode _phoneFocusNode = FocusNode();
+  final TextEditingController _nameCtrl = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
   bool _isLoading = false;
   bool _isDpdpAgreed = false;
   bool _isInputValid = false;
   bool _isPhoneFocused = false;
+  bool _isNameFocused = false;
 
   @override
   void initState() {
     super.initState();
     _phoneCtrl.addListener(_validateInput);
+    _nameCtrl.addListener(_validateInput);
     _phoneFocusNode.addListener(() {
       setState(() {
         _isPhoneFocused = _phoneFocusNode.hasFocus;
       });
     });
+    _nameFocusNode.addListener(() {
+      setState(() {
+        _isNameFocused = _nameFocusNode.hasFocus;
+      });
+    });
   }
 
   void _validateInput() {
-    final text = _phoneCtrl.text.trim();
-    final isValid = text.length >= 10;
+    final phone = _phoneCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
+    final isValid = phone.length >= 10 && name.isNotEmpty;
     if (isValid != _isInputValid) {
       setState(() {
         _isInputValid = isValid;
@@ -44,6 +54,21 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
 
   Future<void> _submitPhone() async {
     final phone = _phoneCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter your name',
+            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+          ),
+          backgroundColor: AppTheme.dangerColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
     if (phone.isEmpty || phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -79,6 +104,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     // Save to storage
     final storage = ref.read(storageServiceProvider);
     await storage.save('phone_number', phone);
+    await storage.save('user_name', name);
     
     // Small delay for UX
     await Future.delayed(const Duration(milliseconds: 800));
@@ -90,8 +116,11 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
   @override
   void dispose() {
     _phoneCtrl.removeListener(_validateInput);
+    _nameCtrl.removeListener(_validateInput);
     _phoneCtrl.dispose();
     _phoneFocusNode.dispose();
+    _nameCtrl.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -197,6 +226,78 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                           ),
                         ),
                         const SizedBox(height: 36),
+
+                        // Tactile 3D Elevated Name Input Container
+                        Container(
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _isNameFocused 
+                                  ? AppTheme.primaryColor 
+                                  : Colors.grey.shade200, 
+                              width: _isNameFocused ? 1.8 : 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _isNameFocused
+                                    ? AppTheme.primaryColor.withValues(alpha: 0.05)
+                                    : Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                              const BoxShadow(
+                                color: Colors.white,
+                                blurRadius: 4,
+                                offset: Offset(-2, -2),
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 18),
+                              const Icon(
+                                Icons.person_outline_rounded,
+                                color: AppTheme.primaryColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                width: 1.2,
+                                height: 24,
+                                color: Colors.grey.shade200,
+                              ),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                child: TextField(
+                                  controller: _nameCtrl,
+                                  focusNode: _nameFocusNode,
+                                  keyboardType: TextInputType.name,
+                                  textCapitalization: TextCapitalization.words,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter your name',
+                                    hintStyle: GoogleFonts.plusJakartaSans(
+                                      color: Colors.grey.shade400,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    filled: false,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
 
                         // Tactile 3D Elevated Mobile Input Container (Focus border detection)
                         Container(

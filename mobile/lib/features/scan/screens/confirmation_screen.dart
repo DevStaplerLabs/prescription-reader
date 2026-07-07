@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../schedule/screens/home_screen.dart';
 
@@ -143,6 +144,23 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       // Merge user edits back into the parsedData
       final Map<String, dynamic> mergedParsedData = Map.from(originalParsedData);
       mergedParsedData['medications'] = medications;
+
+      // Fetch the registered phone number from StorageService
+      final storage = ref.read(storageServiceProvider);
+      final rawPhone = await storage.read('phone_number') as String?;
+      String? phone = rawPhone;
+      if (phone != null && phone.isNotEmpty) {
+        phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+        // Default to Indian country code (+91) if it's a standard 10-digit number
+        if (!phone.startsWith('91') && phone.length == 10) {
+          phone = '91$phone';
+        }
+      }
+
+      // Inject the phone number into the patient details
+      final Map<String, dynamic> patientData = Map.from(mergedParsedData['patient'] as Map<String, dynamic>? ?? {});
+      patientData['phone'] = phone;
+      mergedParsedData['patient'] = patientData;
 
       final confirmPayload = {
         'rawOcrText': widget.ocrData['rawOcrText'] ?? '',

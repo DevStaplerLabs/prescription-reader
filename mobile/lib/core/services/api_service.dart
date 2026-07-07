@@ -106,9 +106,14 @@ class ApiService {
   }
 
   // Get active schedules from database
-  Future<List<Map<String, dynamic>>> getActiveSchedules() async {
+  Future<List<Map<String, dynamic>>> getActiveSchedules(String patientPhone) async {
     try {
-      final response = await _dio.get('${AppConstants.baseUrl}${AppConstants.activeSchedulesEndpoint}');
+      final response = await _dio.get(
+        '${AppConstants.baseUrl}${AppConstants.activeSchedulesEndpoint}',
+        queryParameters: {
+          if (patientPhone.isNotEmpty) 'patientPhone': patientPhone,
+        },
+      );
 
       if (response.statusCode == 200 && response.data != null) {
         final apiResponse = response.data as Map<String, dynamic>;
@@ -148,6 +153,7 @@ class ApiService {
 
               flatList.add({
                 'id': doseId,
+                'scheduleId': schedule['_id']?.toString() ?? '',
                 'drugName': drugName,
                 'dosage': dosage,
                 'time': timeGroup,
@@ -166,6 +172,59 @@ class ApiService {
         return []; // 404 is standard when there is no active schedule in the DB
       }
       throw Exception('API Active Schedules Error: $e');
+    }
+  }
+
+  // Discontinue/deactivate an active schedule
+  Future<bool> deactivateActiveSchedule(String scheduleId) async {
+    try {
+      final response = await _dio.patch(
+        '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/$scheduleId/deactivate',
+      );
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      throw Exception('API Deactivate Error: $e');
+    }
+  }
+
+  // Get past inactive schedules history for a patient
+  Future<List<Map<String, dynamic>>> getHistorySchedules(String patientPhone) async {
+    try {
+      final response = await _dio.get(
+        '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/history',
+        queryParameters: {'patientPhone': patientPhone},
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final apiResponse = response.data as Map<String, dynamic>;
+        if (apiResponse['status'] == 'success') {
+          final data = apiResponse['data'] as Map<String, dynamic>? ?? {};
+          final historyList = data['history'] as List<dynamic>? ?? [];
+          return historyList.map((e) => Map<String, dynamic>.from(e)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      throw Exception('API History Error: $e');
+    }
+  }
+
+  // Atomic restore of a past schedule
+  Future<bool> restoreSchedule(String scheduleId, String patientPhone) async {
+    try {
+      final response = await _dio.post(
+        '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/$scheduleId/restore',
+        data: {'patientPhone': patientPhone},
+      );
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      throw Exception('API Restore Error: $e');
     }
   }
 

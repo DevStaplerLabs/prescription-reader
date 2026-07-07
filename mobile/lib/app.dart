@@ -10,6 +10,8 @@ import 'features/history/screens/history_screen.dart';
 import 'features/onboarding/screens/phone_input_screen.dart';
 import 'features/scan/screens/consent_screen.dart';
 
+import 'core/services/storage_service.dart';
+
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -17,6 +19,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/onboarding',
+    redirect: (context, state) async {
+      final storage = ref.read(storageServiceProvider);
+      final phone = await storage.read('phone_number') as String?;
+      final isOnboarding = state.matchedLocation == '/onboarding';
+      
+      if (phone != null && phone.trim().isNotEmpty) {
+        if (isOnboarding) {
+          return '/';
+        }
+      } else {
+        if (!isOnboarding) {
+          return '/onboarding';
+        }
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
