@@ -14,8 +14,12 @@ IMPORTANT CONVENTIONS:
 - "1-1-1" means: 1 dose morning, 1 dose afternoon, 1 dose night
 - "1-0-0" means: 1 dose morning only
 - "0-0-1" means: 1 dose night only
+- Standard Indian doctor shorthand symbols for dosage frequency:
+  * A horizontal line with three circles (e.g. "o - o - o", "o-o-o") means: 1 dose morning, 1 dose afternoon, 1 dose night (1-1-1)
+  * A horizontal line with two circles (e.g. "o --- o", "o - o") means: 1 dose morning, 0 dose afternoon, 1 dose night (1-0-1)
+  * A horizontal line with one circle at the start (e.g. "o ---", "o --") means: 1 dose morning, 0 dose afternoon, 0 dose night (1-0-0)
 - "Tab" = Tablet, "Cap" = Capsule, "Syp" = Syrup, "Inj" = Injection
-- "x 5 days" or "x5days" means duration of 5 days
+- "x 5 days" or "x5days" or "x 5" means duration of 5 days
 - "x 1 week" means duration of 7 days
 - "BD" = twice daily (morning and night, same as 1-0-1)
 - "TDS" = three times daily (same as 1-1-1)
