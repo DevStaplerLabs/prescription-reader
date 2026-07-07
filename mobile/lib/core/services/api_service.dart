@@ -5,7 +5,12 @@ import '../constants/app_constants.dart';
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 class ApiService {
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 25),
+    ),
+  );
 
   // In-memory store for dose adherence statuses (e.g. 'taken', 'missed', 'snoozed')
   final Map<String, String> _adherenceStore = {};

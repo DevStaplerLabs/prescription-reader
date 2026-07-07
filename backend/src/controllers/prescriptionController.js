@@ -47,14 +47,21 @@ export const parsePrescription = async (req, res, next) => {
     // Determine MIME type from the uploaded file
     const mimeType = req.file.mimetype || 'image/jpeg';
 
-    // Step 1: Extract raw OCR text (for storage and fallback)
-    const rawOcrText = await extractTextFromImage(req.file.buffer);
-
-    // Step 2: Parse the image directly with Gemini Vision
+    // Step 1: Parse the image directly with Gemini Vision (Very fast!)
     const { data: parsedData, warnings } = await parsePrescriptionImage(
       req.file.buffer,
       mimeType
     );
+
+    // Step 2: Set rawOcrText from parsed rawNotes, or optionally run OCR if configured
+    let rawOcrText = parsedData.rawNotes || '';
+    if (!rawOcrText && process.env.GOOGLE_VISION_API && process.env.GOOGLE_VISION_API !== 'your_google_vision_api_key_here') {
+      try {
+        rawOcrText = await extractTextFromImage(req.file.buffer);
+      } catch (ocrErr) {
+        console.warn('[prescriptionController] Optional Vision OCR failed:', ocrErr.message);
+      }
+    }
 
     return res.status(200).json({
       status: 'success',
