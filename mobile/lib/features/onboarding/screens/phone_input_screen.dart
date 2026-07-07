@@ -146,37 +146,42 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        // Left Logo (Clean flat rectangular badge + Rx Reader + Tagline)
+                        // Left Logo (StaplerLabs Logo + Title + Tagline)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
+                              width: 32,
+                              height: 32,
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor,
                                 borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.link_rounded,
                                 color: Colors.white,
-                                size: 20,
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Prescription Reader',
+                                  'StaplerLabs',
                                   style: GoogleFonts.plusJakartaSans(
-                                    color: const Color(0xFF1E293B),
+                                    color: AppTheme.primaryColor,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
                                   ),
                                 ),
                                 Text(
-                                  'by StaplerLabs',
+                                  'Smart Prescription System',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Colors.grey.shade500,
                                     fontSize: 10,

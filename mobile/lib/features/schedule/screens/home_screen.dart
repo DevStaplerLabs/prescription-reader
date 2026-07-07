@@ -242,16 +242,7 @@ class HomeScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        if (schedules.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.cancel_presentation_outlined, color: AppTheme.dangerColor),
-                            tooltip: 'Discontinue Schedule',
-                            onPressed: () => _confirmDiscontinue(
-                              context,
-                              ref,
-                              schedules.first['scheduleId'] as String,
-                            ),
-                          ),
+                        // Old cross icon button removed. Discontinuation is now handled by the premium button at the bottom of the list.
                       ],
                     ),
                   ),
@@ -267,6 +258,20 @@ class HomeScreen extends ConsumerWidget {
                         return _buildGroupedCard(context, ref, timeGroup, list);
                       },
                       childCount: grouped.keys.length,
+                    ),
+                  ),
+
+                if (schedules.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 24, right: 24, top: 12, bottom: 24),
+                      child: _DiscontinueAnimatedButton(
+                        onTap: () => _confirmDiscontinue(
+                          context,
+                          ref,
+                          schedules.first['scheduleId'] as String,
+                        ),
+                      ),
                     ),
                   ),
                 
@@ -478,12 +483,12 @@ class HomeScreen extends ConsumerWidget {
           // Clinic Logo and Title Row (Glassmorphic)
           Row(
             children: [
-              // Logo Placeholder Icon with Glassmorphism
+              // StaplerLabs Logo Container
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.22),
@@ -497,11 +502,11 @@ class HomeScreen extends ConsumerWidget {
                     )
                   ],
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    color: Colors.white,
-                    size: 20,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
@@ -510,16 +515,17 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Your Clinic Logo Here",
+                    "StaplerLabs",
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 16,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Powered by Prescription Reader",
+                    "Powered by StaplerLabs",
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.white.withValues(alpha: 0.65),
                       fontSize: 11,
@@ -898,6 +904,72 @@ class _HomeMedicationRowState extends State<_HomeMedicationRow> {
                 widget.statusChip,
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscontinueAnimatedButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _DiscontinueAnimatedButton({required this.onTap});
+
+  @override
+  State<_DiscontinueAnimatedButton> createState() => _DiscontinueAnimatedButtonState();
+}
+
+class _DiscontinueAnimatedButtonState extends State<_DiscontinueAnimatedButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          transform: Matrix4.diagonal3Values(
+            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+            _isPressed ? 0.98 : (_isHovered ? 1.02 : 1.0),
+            1.0,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          decoration: BoxDecoration(
+            color: _isHovered ? AppTheme.dangerColor.withValues(alpha: 0.05) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: AppTheme.dangerColor.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cancel_presentation_outlined,
+                color: AppTheme.dangerColor,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Discontinue your current schedule',
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppTheme.dangerColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
           ),
         ),
       ),

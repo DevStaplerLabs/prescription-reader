@@ -7,7 +7,7 @@ class HistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Exact history data from mockup Image 4
+    // Exact history data from mockup
     final adherenceData = [
       {
         'drug': 'Paracetamol 500mg',
@@ -30,37 +30,72 @@ class HistoryScreen extends StatelessWidget {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Dark Teal Header
+          // Classy StaplerLabs Themed Dark Navy Header
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
+            padding: const EdgeInsets.only(top: 54, bottom: 24, left: 24, right: 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF00B894), Color(0xFF00A381)],
+                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Adherence History',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Adherence Log',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    // StaplerLabs Logo integrated into header
+                    Container(
+                      height: 28,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo.png',
+                            height: 18,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'STAPLERLABS',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: AppTheme.accentColor,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  'Last 7 days',
+                  '7-Day Patient Compliance Audit',
                   style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -69,219 +104,319 @@ class HistoryScreen extends StatelessWidget {
             ),
           ),
           
-          // History list
+          // Scrollable Body
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-              itemCount: adherenceData.length + 1, // list + legend
-              itemBuilder: (context, index) {
-                // Return Legend at the end
-                if (index == adherenceData.length) {
-                  return _buildLegendRow();
-                }
-
-                final item = adherenceData[index];
-                final percentage = item['percentage'] as int;
-                final streak = item['streak'] as List<String>;
-
-                // Determine progress bar color based on percentage
-                Color adherenceColor;
-                if (percentage >= 80) {
-                  adherenceColor = AppTheme.primaryColor; // mint/teal success
-                } else if (percentage >= 50) {
-                  adherenceColor = const Color(0xFFEAA011); // orange/yellow
-                } else {
-                  adherenceColor = const Color(0xFFE25C6E); // red/pink
-                }
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                      BoxShadow(
-                        color: AppTheme.secondaryColor.withValues(alpha: 0.02),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      )
-                    ],
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              children: [
+                // Summary KPI Stats Card
+                _buildSummaryKPI(),
+                const SizedBox(height: 24),
+                
+                Text(
+                  'MEDICATION STREAK DETAILS',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey.shade500,
+                    letterSpacing: 1.2,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Drug name & Percentage Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            item['drug'] as String,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1E293B),
+                ),
+                const SizedBox(height: 12),
+                
+                // History cards
+                ...adherenceData.map((item) {
+                  final percentage = item['percentage'] as int;
+                  final streak = item['streak'] as List<String>;
+
+                  // Determine color based on compliance
+                  Color adherenceColor;
+                  if (percentage >= 85) {
+                    adherenceColor = AppTheme.primaryColor; // Navy
+                  } else if (percentage >= 60) {
+                    adherenceColor = AppTheme.accentColor; // Yellow
+                  } else {
+                    adherenceColor = AppTheme.dangerColor; // Red
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Drug Title Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              item['drug'] as String,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                              ),
                             ),
-                          ),
-                          Text(
-                            '$percentage%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: adherenceColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      
-                      // 3D Cylindrical Glass Tube Progress Bar
-                      Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: LinearProgressIndicator(
-                              value: percentage / 100.0,
-                              backgroundColor: Colors.grey.shade100,
-                              valueColor: AlwaysStoppedAnimation<Color>(adherenceColor),
-                              minHeight: 10,
-                            ),
-                          ),
-                          // Cylindrical Highlight Overlay for 3D Gloss
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(5),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.35),
-                                      Colors.white.withValues(alpha: 0.05),
-                                      Colors.black.withValues(alpha: 0.02),
-                                      Colors.black.withValues(alpha: 0.18),
-                                    ],
-                                    stops: const [0.0, 0.3, 0.7, 1.0],
-                                  ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: adherenceColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$percentage% score',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: adherenceColor,
                                 ),
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Clean flat progress indicator
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: percentage / 100.0,
+                            backgroundColor: Colors.grey.shade100,
+                            valueColor: AlwaysStoppedAnimation<Color>(adherenceColor),
+                            minHeight: 5,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // 7-day streak dots rendered as 3D glass marbles
-                      Row(
-                        children: List.generate(streak.length, (dotIdx) {
-                          final state = streak[dotIdx];
-                          Color dotColor;
-                          switch (state) {
-                            case 'taken':
-                              dotColor = AppTheme.primaryColor;
-                              break;
-                            case 'missed':
-                              dotColor = const Color(0xFFFCA5A5); // pinkish-red
-                              break;
-                            case 'snoozed':
-                            default:
-                              dotColor = const Color(0xFFFCD34D); // yellow/orange
-                              break;
-                          }
-
-                          return Container(
-                            width: 15,
-                            height: 15,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(
-                                colors: [
-                                  Colors.white.withValues(alpha: 0.9), // spec highlight
-                                  dotColor,
-                                  dotColor.withValues(alpha: 0.82), // base shadow
-                                ],
-                                center: const Alignment(-0.35, -0.35),
-                                radius: 0.85,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: dotColor.withValues(alpha: 0.28),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
-                                )
-                              ],
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Streaks layout
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(streak.length, (dotIdx) {
+                            final state = streak[dotIdx];
+                            return _buildStreakBadge(dotIdx + 1, state);
+                          }),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                
+                const SizedBox(height: 8),
+                _buildLegendRow(),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // Summary KPI card
+  Widget _buildSummaryKPI() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Average Adherence',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '86.3% Compliance',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Your patient is highly compliant in their routine.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Circular Score Widget
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppTheme.primaryColor.withValues(alpha: 0.05),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: CircularProgressIndicator(
+                    value: 0.863,
+                    strokeWidth: 5,
+                    backgroundColor: Colors.grey.shade100,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                  ),
+                ),
+                Text(
+                  '86%',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Modern streak badge (replaces 3D glass marbles)
+  Widget _buildStreakBadge(int dayNum, String state) {
+    Color bg;
+    Color fg;
+    IconData icon;
+
+    switch (state) {
+      case 'taken':
+        bg = const Color(0xFFECFDF5);
+        fg = const Color(0xFF059669);
+        icon = Icons.check_rounded;
+        break;
+      case 'missed':
+        bg = const Color(0xFFFEF2F2);
+        fg = const Color(0xFFEF4444);
+        icon = Icons.close_rounded;
+        break;
+      case 'snoozed':
+      default:
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        icon = Icons.access_time_filled_rounded;
+        break;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: bg,
+            shape: BoxShape.circle,
+            border: Border.all(color: fg.withValues(alpha: 0.15), width: 1),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 14,
+              color: fg,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Day $dayNum',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildLegendRow() {
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 24.0, left: 4.0),
-      child: Row(
-        children: [
-          _buildLegendItem('Taken', AppTheme.primaryColor),
-          const SizedBox(width: 16),
-          _buildLegendItem('Missed', const Color(0xFFFCA5A5)),
-          const SizedBox(width: 16),
-          _buildLegendItem('Snoozed', const Color(0xFFFCD34D)),
-        ],
+      padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade100, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildLegendItem('Taken', const Color(0xFF059669), Icons.check_rounded),
+            _buildLegendItem('Missed', const Color(0xFFEF4444), Icons.close_rounded),
+            _buildLegendItem('Snoozed', const Color(0xFFD97706), Icons.access_time_filled_rounded),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) {
+  Widget _buildLegendItem(String label, Color color, IconData icon) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 3D Glass Marble legend marker
         Container(
-          width: 15,
-          height: 15,
+          width: 20,
+          height: 20,
           decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.9),
-                color,
-                color.withValues(alpha: 0.82),
-              ],
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 10,
+              color: color,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.2),
-                blurRadius: 4,
-                offset: const Offset(0, 1.5),
-              )
-            ],
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Text(
           label,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
             color: Colors.grey.shade600,
           ),
         ),

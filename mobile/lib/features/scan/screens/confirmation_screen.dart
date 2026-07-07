@@ -213,9 +213,9 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
 
   Color _getDotColor(int index) {
     final colors = [
-      const Color(0xFF00B894), // Green/Teal
-      const Color(0xFFEAA011), // Orange
-      const Color(0xFFE25C6E), // Pink
+      AppTheme.primaryColor,
+      AppTheme.accentColor,
+      AppTheme.dangerColor,
     ];
     return colors[index % colors.length];
   }
@@ -228,12 +228,16 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Green Header Bar matching mockup
+          // Navy Header Bar matching StaplerLabs theme
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
             decoration: const BoxDecoration(
-              color: Color(0xFF00A381),
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
@@ -376,8 +380,8 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                   OutlinedButton(
                     onPressed: _addMedication,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF00B894),
-                      side: const BorderSide(color: Color(0xFF00B894), width: 1.5),
+                      foregroundColor: AppTheme.primaryColor,
+                      side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -386,7 +390,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_rounded, color: Color(0xFF00B894), size: 20),
+                        const Icon(Icons.add_rounded, color: AppTheme.primaryColor, size: 20),
                         const SizedBox(width: 6),
                         Text(
                           'Add Medication',
@@ -413,7 +417,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             child: ElevatedButton(
               onPressed: _isSaving ? null : _saveSchedule,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00B894),
+                backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -510,14 +514,14 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
           child: Container(
             width: 32,
             height: 32,
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8FBF5),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Center(
               child: Icon(
                 Icons.edit_rounded,
-                color: Color(0xFF00B894),
+                color: AppTheme.primaryColor,
                 size: 16,
               ),
             ),
@@ -539,13 +543,13 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
               style: GoogleFonts.plusJakartaSans(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: const Color(0xFF00B894),
+                color: AppTheme.primaryColor,
               ),
             ),
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF00B894), size: 22),
+                  icon: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primaryColor, size: 22),
                   onPressed: () {
                     setState(() {
                       _isEditing[index] = false;

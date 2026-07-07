@@ -80,187 +80,190 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
       backgroundColor: AppTheme.backgroundColor,
       body: Stack(
         children: [
-          // Main Content
-          Column(
-            children: [
-              // Custom Header Bar with gradient and subtle 3D border shadow
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF00B894), Color(0xFF00A381)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Scan Prescription',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+          // Main Content - Scrollable to support landscape mode responsiveness
+          SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                // Custom Header Bar with gradient and subtle 3D border shadow
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    // Help Circle Button
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.help_outline_rounded,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Scan Prescription',
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
-                          size: 20,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Position a printed prescription inside the box to scan.',
-                                style: GoogleFonts.plusJakartaSans(),
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Interactive Tappable Viewfinder box with glowing corners & sweeping scanline
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: AnimatedBuilder(
-                  animation: _animCtrl,
-                  builder: (context, child) {
-                    return InkWell(
-                      onTap: () {
-                        // Show bottom sheet to choose Camera or Gallery
-                        showModalBottomSheet(
-                          context: context,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      // Help Circle Button
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.help_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
-                          backgroundColor: Colors.white,
-                          builder: (context) {
-                            return SafeArea(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 4,
-                                    margin: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade300,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryColor),
-                                    title: Text('Take Photo', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _pickAndUploadImage(ImageSource.camera);
-                                    },
-                                  ),
-                                  const Divider(height: 1),
-                                  ListTile(
-                                    leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryColor),
-                                    title: Text('Choose from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _pickAndUploadImage(ImageSource.gallery);
-                                    },
-                                  ),
-                                  const SizedBox(height: 8),
-                                ],
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Position a printed prescription inside the box to scan.',
+                                  style: GoogleFonts.plusJakartaSans(),
+                                ),
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           },
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: CustomPaint(
-                        painter: _ScannerViewfinderPainter(
-                          color: AppTheme.primaryColor,
-                          animationValue: _animCtrl.value,
-                        ),
-                        child: Container(
-                          width: double.infinity,
-                          height: 170,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Glowing camera icon container
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppTheme.primaryColor.withValues(alpha: 0.28),
-                                      blurRadius: 12,
-                                      spreadRadius: 1,
-                                    )
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.camera_alt_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Tap to capture prescription',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: AppTheme.secondaryColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Printed prescriptions only',
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                
+                // Interactive Tappable Viewfinder box with glowing corners & sweeping scanline
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: AnimatedBuilder(
+                    animation: _animCtrl,
+                    builder: (context, child) {
+                      return InkWell(
+                        onTap: () {
+                          // Show bottom sheet to choose Camera or Gallery
+                          showModalBottomSheet(
+                            context: context,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                            ),
+                            backgroundColor: Colors.white,
+                            builder: (context) {
+                              return SafeArea(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      margin: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.primaryColor),
+                                      title: Text('Take Photo', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        _pickAndUploadImage(ImageSource.camera);
+                                      },
+                                    ),
+                                    const Divider(height: 1),
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library_rounded, color: AppTheme.primaryColor),
+                                      title: Text('Choose from Gallery', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        _pickAndUploadImage(ImageSource.gallery);
+                                      },
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: CustomPaint(
+                          painter: _ScannerViewfinderPainter(
+                            color: AppTheme.primaryColor,
+                            animationValue: _animCtrl.value,
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            height: 170,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Glowing camera icon container
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.primaryColor.withValues(alpha: 0.28),
+                                        blurRadius: 12,
+                                        spreadRadius: 1,
+                                      )
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Tap to capture prescription',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: AppTheme.secondaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Printed prescriptions only',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
           
           // Processing overlay with beautiful glassmorphism
