@@ -91,7 +91,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
                   padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                      colors: [AppTheme.accentColor, Color(0xFFE5B600)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -106,7 +106,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
                       Text(
                         'Scan Prescription',
                         style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
+                          color: AppTheme.primaryColor,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -116,14 +116,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: IconButton(
                           padding: EdgeInsets.zero,
                           icon: const Icon(
                             Icons.help_outline_rounded,
-                            color: Colors.white,
+                            color: AppTheme.primaryColor,
                             size: 20,
                           ),
                           onPressed: () {

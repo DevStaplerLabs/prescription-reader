@@ -30,13 +30,13 @@ class HistoryScreen extends StatelessWidget {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Classy StaplerLabs Themed Dark Navy Header
+          // Classy StaplerLabs Themed Yellow Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 54, bottom: 24, left: 24, right: 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                colors: [AppTheme.accentColor, Color(0xFFE5B600)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -54,7 +54,7 @@ class HistoryScreen extends StatelessWidget {
                     Text(
                       'Adherence Log',
                       style: GoogleFonts.plusJakartaSans(
-                        color: Colors.white,
+                        color: AppTheme.primaryColor,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
@@ -65,7 +65,7 @@ class HistoryScreen extends StatelessWidget {
                       height: 28,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.08),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Row(
@@ -80,7 +80,7 @@ class HistoryScreen extends StatelessWidget {
                           Text(
                             'STAPLERLABS',
                             style: GoogleFonts.plusJakartaSans(
-                              color: AppTheme.accentColor,
+                              color: AppTheme.primaryColor,
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.0,
@@ -95,7 +95,7 @@ class HistoryScreen extends StatelessWidget {
                 Text(
                   '7-Day Patient Compliance Audit',
                   style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),

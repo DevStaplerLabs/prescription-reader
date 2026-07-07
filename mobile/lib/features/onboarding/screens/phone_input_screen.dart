@@ -172,7 +172,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'StaplerLabs',
+                                  'Prescription Reader',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: AppTheme.primaryColor,
                                     fontSize: 16,
@@ -181,7 +181,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Smart Prescription System',
+                                  'Powered by StaplerLabs',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Colors.grey.shade500,
                                     fontSize: 10,

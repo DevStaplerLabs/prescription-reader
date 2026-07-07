@@ -486,7 +486,7 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+          colors: [AppTheme.accentColor, Color(0xFFE5B600)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -510,7 +510,7 @@ class HomeScreen extends ConsumerWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.22),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.22),
                     width: 1.2,
                   ),
                   boxShadow: [
@@ -534,9 +534,9 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "StaplerLabs",
+                    "Prescription Reader",
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white,
+                      color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                       letterSpacing: -0.3,
@@ -546,7 +546,7 @@ class HomeScreen extends ConsumerWidget {
                   Text(
                     "Powered by StaplerLabs",
                     style: GoogleFonts.plusJakartaSans(
-                      color: Colors.white.withValues(alpha: 0.65),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.65),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
@@ -561,28 +561,28 @@ class HomeScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Yellow dot status indicator
+                // Navy dot status indicator (adjusted contrast for yellow header)
                 Container(
                   width: 8,
                   height: 8,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFFFB703), // Vibrant yellow status dot
+                    color: AppTheme.primaryColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0xFFFFB703),
-                        blurRadius: 6,
-                        spreadRadius: 1,
+                        color: AppTheme.primaryColor,
+                        blurRadius: 4,
+                        spreadRadius: 0.5,
                       )
                     ],
                   ),
@@ -591,7 +591,7 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   "Next appointment: Jul 3, 2026 — Dr. Sharma",
                   style: GoogleFonts.plusJakartaSans(
-                    color: Colors.white,
+                    color: AppTheme.primaryColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
