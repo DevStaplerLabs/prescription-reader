@@ -19,8 +19,7 @@ console.log(`Sending ${(imageBuffer.length / 1024).toFixed(1)} KB image to POST 
 console.log('Waiting for response (this may take 10-30s)...\n');
 
 const options = {
-  hostname: 'localhost',
-  port: 5000,
+  hostname: 'prescription-reader-production.up.railway.app',
   path: '/api/prescriptions/parse',
   method: 'POST',
   headers: {
