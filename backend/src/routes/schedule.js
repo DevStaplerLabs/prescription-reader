@@ -147,16 +147,4 @@ router.post('/:id/restore', async (req, res, next) => {
   }
 });
 
-// GET /api/schedules/test-whatsapp-config - Check if WhatsApp credentials are set on the server
-router.get('/test-whatsapp-config', (req, res) => {
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  return res.status(200).json({
-    status: 'success',
-    whatsappConfigured: !!(token && phoneId),
-    hasAccessToken: !!token,
-    hasPhoneNumberId: !!phoneId,
-  });
-});
-
 export default router;
