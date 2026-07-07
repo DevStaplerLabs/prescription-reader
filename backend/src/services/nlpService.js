@@ -333,17 +333,18 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   } catch (visionError) {
     console.warn('[nlpService] Gemini Vision failed. Attempting OCR fallback...', visionError.message);
     
-    // 2. Fall back to Vision API OCR
-    try {
-      ocrText = await extractTextFromImage(imageBuffer);
-      console.log('[nlpService] Vision API OCR succeeded. Text length:', ocrText.length);
-    } catch (ocrError) {
-      console.error('[nlpService] Vision API OCR failed:', ocrError.message);
-      throw new Error(`OCR processing failed: ${ocrError.message}`);
+    // 2. Fall back to Vision API OCR (only if configured and safe)
+    if (process.env.GOOGLE_VISION_API && process.env.GOOGLE_VISION_API !== 'your_google_vision_api_key_here') {
+      try {
+        ocrText = await extractTextFromImage(imageBuffer);
+        console.log('[nlpService] Vision API OCR succeeded. Text length:', ocrText.length);
+      } catch (ocrError) {
+        console.error('[nlpService] Vision API OCR failed:', ocrError.message);
+      }
     }
 
     if (!ocrText || ocrText.trim() === '') {
-      throw new Error('No text detected in the prescription image.');
+      throw new Error(`Gemini Vision failed and OCR fallback was unavailable: ${visionError.message}`);
     }
 
     // 3. Try Gemini Text API using the OCR text

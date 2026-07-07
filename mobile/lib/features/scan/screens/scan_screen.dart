@@ -40,8 +40,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
     final consent = await context.push<bool>('/consent');
     if (consent != true) return;
 
-    // 2. Pick Image
-    final XFile? image = await _picker.pickImage(source: source);
+    // 2. Pick Image (compressed & resized for blazing fast upload & parsing)
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 70,
+    );
     if (image == null) return;
 
     setState(() {

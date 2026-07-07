@@ -8,7 +8,7 @@ class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 25),
+      receiveTimeout: const Duration(seconds: 40),
     ),
   );
 
