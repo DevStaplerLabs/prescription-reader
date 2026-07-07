@@ -418,8 +418,8 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             child: ElevatedButton(
               onPressed: _isSaving ? null : _saveSchedule,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.accentColor,
+                foregroundColor: AppTheme.primaryColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -430,7 +430,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                       height: 24,
                       width: 24,
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                         strokeWidth: 2.5,
                       ),
                     )
