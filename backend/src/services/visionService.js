@@ -1,53 +1,45 @@
+import vision from '@google-cloud/vision';
+
+let client;
+
+const getClient = () => {
+  if (!client) {
+    const apiKey = process.env.GOOGLE_VISION_API;
+    if (!apiKey || apiKey === 'your_google_vision_api_key_here' || apiKey.trim() === '') {
+      console.warn('[visionService] GOOGLE_VISION_API is not set or empty. Skipping OCR initialization.');
+      return null;
+    }
+    client = new vision.ImageAnnotatorClient({
+      fallback: true,
+      apiKey: apiKey,
+    });
+  }
+  return client;
+};
+
 /**
- * Extracts raw text from an image buffer using Google Cloud Vision REST API directly.
- * Uses direct HTTP calls instead of the @google-cloud/vision library to avoid
- * metadata server hangs in non-GCP environments like Railway/Docker.
- * 
+ * Extracts raw text from an image buffer using Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)
  * @param {Buffer} imageBuffer - The buffer of the uploaded image
  * @returns {Promise<string>} The extracted text
  */
 export const extractTextFromImage = async (imageBuffer) => {
-  const apiKey = process.env.GOOGLE_VISION_API;
-  
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_google_vision_api_key_here') {
-    throw new Error('GOOGLE_VISION_API key is not configured.');
-  }
-
-  if (!imageBuffer) {
-    throw new Error('No image buffer provided');
-  }
-
-  const base64Image = imageBuffer.toString('base64');
-
-  const requestBody = {
-    requests: [
-      {
-        image: { content: base64Image },
-        features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }],
-      },
-    ],
-  };
-
   try {
-    const response = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      }
-    );
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(`Vision REST API error ${response.status}: ${errData?.error?.message || response.statusText}`);
+    if (!imageBuffer) {
+      throw new Error('No image buffer provided');
     }
-
-    const data = await response.json();
-    const annotation = data?.responses?.[0]?.fullTextAnnotation;
-    return annotation ? annotation.text : '';
+    
+    const visionClient = getClient();
+    if (!visionClient) {
+      throw new Error('Vision API client not initialized due to missing or invalid API key.');
+    }
+    const [result] = await visionClient.documentTextDetection({
+      image: { content: imageBuffer },
+    });
+    
+    const fullTextAnnotation = result.fullTextAnnotation;
+    return fullTextAnnotation ? fullTextAnnotation.text : '';
   } catch (error) {
-    console.error('[visionService] REST API error:', error.message);
+    console.error('Vision API error:', error);
     throw new Error(`Failed to extract text from image: ${error.message}`);
   }
 };

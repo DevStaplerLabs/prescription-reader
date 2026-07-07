@@ -14,12 +14,8 @@ IMPORTANT CONVENTIONS:
 - "1-1-1" means: 1 dose morning, 1 dose afternoon, 1 dose night
 - "1-0-0" means: 1 dose morning only
 - "0-0-1" means: 1 dose night only
-- Standard Indian doctor shorthand symbols for dosage frequency:
-  * A horizontal line with three circles (e.g. "o - o - o", "o-o-o") means: 1 dose morning, 1 dose afternoon, 1 dose night (1-1-1)
-  * A horizontal line with two circles (e.g. "o --- o", "o - o") means: 1 dose morning, 0 dose afternoon, 1 dose night (1-0-1)
-  * A horizontal line with one circle at the start (e.g. "o ---", "o --") means: 1 dose morning, 0 dose afternoon, 0 dose night (1-0-0)
 - "Tab" = Tablet, "Cap" = Capsule, "Syp" = Syrup, "Inj" = Injection
-- "x 5 days" or "x5days" or "x 5" means duration of 5 days
+- "x 5 days" or "x5days" means duration of 5 days
 - "x 1 week" means duration of 7 days
 - "BD" = twice daily (morning and night, same as 1-0-1)
 - "TDS" = three times daily (same as 1-1-1)
@@ -322,34 +318,40 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   let ocrText = '';
   let fallbackUsed = false;
 
-  // STEP 1: Extract raw text using Google Vision REST API (Primary — as planned)
+  // 1. Try Gemini Vision (Image directly)
   try {
-    console.log('[nlpService] Extracting text via Google Vision REST API...');
-    ocrText = await extractTextFromImage(imageBuffer);
-    console.log(`[nlpService] Google Vision OCR succeeded. Extracted ${ocrText.length} characters.`);
-  } catch (ocrError) {
-    console.error('[nlpService] Google Vision OCR failed:', ocrError.message);
-  }
+    rawParsed = await parseImageWithGemini(
+      PRESCRIPTION_PARSE_PROMPT,
+      imageBuffer,
+      mimeType
+    );
+    console.log('[nlpService] Gemini Vision successfully parsed the image directly.');
+  } catch (visionError) {
+    console.warn('[nlpService] Gemini Vision failed. Attempting OCR fallback...', visionError.message);
+    
+    // 2. Fall back to Vision API OCR
+    try {
+      ocrText = await extractTextFromImage(imageBuffer);
+      console.log('[nlpService] Vision API OCR succeeded. Text length:', ocrText.length);
+    } catch (ocrError) {
+      console.error('[nlpService] Vision API OCR failed:', ocrError.message);
+      throw new Error(`OCR processing failed: ${ocrError.message}`);
+    }
 
-  if (ocrText && ocrText.trim() !== '') {
-    // STEP 2: Send OCR text to Gemini to structure it into JSON
+    if (!ocrText || ocrText.trim() === '') {
+      throw new Error('No text detected in the prescription image.');
+    }
+
+    // 3. Try Gemini Text API using the OCR text
     try {
       rawParsed = await parseTextWithGemini(PRESCRIPTION_PARSE_PROMPT, ocrText);
-      console.log('[nlpService] Gemini structured the OCR text successfully.');
-    } catch (geminiError) {
-      console.warn('[nlpService] Gemini structuring failed, trying regex fallback:', geminiError.message);
-      // STEP 3: Regex fallback if Gemini is unavailable
+      console.log('[nlpService] Gemini Text API successfully parsed the OCR text.');
+    } catch (textLLMError) {
+      console.warn('[nlpService] Gemini Text API failed. Running local regex parser fallback...', textLLMError.message);
+      
+      // 4. Local regex-based parsing fallback
       rawParsed = parseTextWithRegex(ocrText);
       fallbackUsed = true;
-    }
-  } else {
-    // Google Vision failed — try Gemini Vision directly as backup
-    console.warn('[nlpService] Google Vision returned no text. Trying Gemini Vision direct parse...');
-    try {
-      rawParsed = await parseImageWithGemini(PRESCRIPTION_PARSE_PROMPT, imageBuffer, mimeType);
-      console.log('[nlpService] Gemini Vision direct parse succeeded.');
-    } catch (geminiVisionError) {
-      throw new Error(`All parsing methods failed. Google Vision: no text. Gemini Vision: ${geminiVisionError.message}`);
     }
   }
 
@@ -357,7 +359,7 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   const { data, warnings } = validateParsedData(rawParsed);
 
   if (fallbackUsed) {
-    warnings.push('Gemini API unavailable — parsed using rule-based fallback. Some fields may need manual correction.');
+    warnings.push('Parsing performed by rule-based fallback parser (Gemini API was unavailable). Some fields may need manual correction.');
   }
 
   if (warnings.length > 0) {
@@ -365,6 +367,7 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   }
 
   console.log(`[nlpService] Successfully parsed ${data.medications.length} medication(s).`);
+
   return { data, warnings };
 };
 
