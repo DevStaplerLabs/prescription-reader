@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import http from 'http';
+import https from 'https';
 
 const imagePath = path.resolve('../mobile/assets/images/logo.png');
 const imageBuffer = fs.readFileSync(imagePath);
@@ -19,7 +19,7 @@ console.log(`Sending ${(imageBuffer.length / 1024).toFixed(1)} KB image to POST 
 console.log('Waiting for response (this may take 10-30s)...\n');
 
 const options = {
-  hostname: 'prescription-reader-production.up.railway.app',
+  hostname: 'doc-api.staplerlabs.com',
   path: '/api/prescriptions/parse',
   method: 'POST',
   headers: {
@@ -28,7 +28,7 @@ const options = {
   },
 };
 
-const req = http.request(options, (res) => {
+const req = https.request(options, (res) => {
   let data = '';
   res.on('data', (chunk) => { data += chunk; });
   res.on('end', () => {
