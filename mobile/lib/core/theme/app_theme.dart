@@ -2,28 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0D47A1); // Deep modern medical blue
-  static const Color secondaryColor = Color(0xFF1976D2);
-  static const Color accentColor = Color(0xFF00B0FF);
-  static const Color backgroundColor = Color(0xFFF4F7FC); // Soft cool white
+  static const Color primaryColor = Color(0xFF00B894); // Teal/Mint Primary
+  static const Color secondaryColor = Color(0xFF00A381); // Dark Teal/Mint for Headers
+  static const Color accentColor = Color(0xFF00B894);  // Accent Mint
+  static const Color successColor = Color(0xFF00B894); // Success/Taken Mint
+  static const Color warningColor = Color(0xFFEAA011); // Warning Orange/Yellow
+  static const Color dangerColor = Color(0xFFE25C6E);  // Danger Red/Pink
+  static const Color backgroundColor = Color(0xFFE8FBF5); // Primary Light Mint background
   static const Color cardColor = Colors.white;
 
+  static List<BoxShadow> get premiumShadow => [
+        BoxShadow(
+          color: const Color(0xFF00B894).withValues(alpha: 0.08),
+          offset: const Offset(0, 4),
+          blurRadius: 20,
+          spreadRadius: 0,
+        )
+      ];
+
   static ThemeData get lightTheme {
+    final textTheme = GoogleFonts.plusJakartaSansTextTheme();
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         primary: primaryColor,
-        secondary: secondaryColor,
+        secondary: accentColor,
         surface: backgroundColor,
       ),
       scaffoldBackgroundColor: backgroundColor,
       
-      // Beautiful Google Font Setup
-      textTheme: GoogleFonts.outfitTextTheme().copyWith(
-        titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
-        bodyLarge: GoogleFonts.outfit(color: const Color(0xFF334155)),
-        bodyMedium: GoogleFonts.outfit(color: const Color(0xFF475569)),
+      // Plus Jakarta Sans Font Setup
+      textTheme: textTheme.copyWith(
+        titleLarge: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: primaryColor),
+        bodyLarge: GoogleFonts.plusJakartaSans(color: const Color(0xFF1E293B)),
+        bodyMedium: GoogleFonts.plusJakartaSans(color: const Color(0xFF475569)),
       ),
 
       // AppBar Overhaul
@@ -32,54 +45,38 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: primaryColor),
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.plusJakartaSans(
           color: primaryColor,
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
       ),
 
-      // Glassmorphism/Premium Cards
+      // Card Theme
       cardTheme: CardThemeData(
         color: cardColor,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24), // Ultra rounded corners
-          side: BorderSide(color: Colors.blue.withValues(alpha: 0.1), width: 1),
-        ),
-      ),
-
-      // Beautiful Buttons
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shadowColor: primaryColor.withValues(alpha: 0.4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          textStyle: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
 
       // Modern Inputs
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.all(20),
+        fillColor: backgroundColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.blue.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: accentColor, width: 2),
         ),
       ),
       
@@ -90,8 +87,8 @@ class AppTheme {
         unselectedItemColor: Colors.grey.shade400,
         type: BottomNavigationBarType.fixed,
         elevation: 20,
-        selectedLabelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w500, fontSize: 12),
+        selectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500, fontSize: 12),
       ),
     );
   }

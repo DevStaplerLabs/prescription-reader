@@ -1,3 +1,7 @@
+import dns from 'dns';
+// Set process DNS servers to Google and Cloudflare to resolve Atlas SRV records
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
