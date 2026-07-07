@@ -175,13 +175,18 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Schedules Saved Successfully!', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          content: Text('Schedule Saved! 🎉', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
           backgroundColor: AppTheme.successColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
         ),
       );
-      context.go('/'); // Go back home
+
+      // Small delay to let provider fully dispose before home screen mounts
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      context.go('/'); // Go back home — provider will now fetch fresh data
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -54,7 +54,7 @@ Return this exact JSON structure:
         "night": 0
       },
       "duration": {
-        "value": 5,
+        "value": 3,
         "unit": "days | weeks | months"
       },
       "mealInstruction": "before | after | with | null",
@@ -102,13 +102,12 @@ const validateParsedData = (parsed) => {
       warnings.push(`Medication "${med.drugName}": no frequency data found.`);
     }
 
-    // Ensure duration exists and is valid
-    if (med.duration) {
-      if (typeof med.duration.value !== 'number' || med.duration.value <= 0) {
-        warnings.push(`Medication "${med.drugName}": invalid duration value: ${med.duration.value}`);
-      }
+    // Ensure duration exists and is valid — default to 3 days if missing
+    if (!med.duration || typeof med.duration.value !== 'number' || med.duration.value <= 0 || med.duration.value == null) {
+      med.duration = { value: 3, unit: 'days' };
+      warnings.push(`Medication "${med.drugName}": duration not found, defaulted to 3 days.`);
+    } else {
       if (!['days', 'weeks', 'months'].includes(med.duration.unit)) {
-        warnings.push(`Medication "${med.drugName}": invalid duration unit: ${med.duration.unit}`);
         med.duration.unit = 'days';
       }
     }
