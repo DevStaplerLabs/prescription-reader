@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 
-const imagePath = path.resolve('../dataset/prescription.jpg');
+const imagePath = path.resolve('../mobile/assets/images/logo.png');
 const imageBuffer = fs.readFileSync(imagePath);
 
 const boundary = '----FormBoundary' + Date.now();
