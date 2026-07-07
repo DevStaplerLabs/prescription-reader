@@ -446,7 +446,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                           text: 'Continue',
                           onPressed: _isLoading ? null : _submitPhone, // Always active
                           isLoading: _isLoading,
-                          icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                          icon: const Icon(Icons.arrow_forward_rounded, color: AppTheme.primaryColor, size: 18),
                         ),
                         const SizedBox(height: 12),
                       ],

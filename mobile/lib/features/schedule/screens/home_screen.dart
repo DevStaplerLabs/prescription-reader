@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -113,7 +114,9 @@ class HomeScreen extends ConsumerWidget {
     if (confirmed == true) {
       try {
         final apiService = ref.read(apiServiceProvider);
+        final storage = ref.read(storageServiceProvider);
         await apiService.deactivateActiveSchedule(scheduleId);
+        await storage.remove('cached_schedules'); // Invalidate SWR cache
         ref.invalidate(schedulesProvider);
         ref.invalidate(historySchedulesProvider);
         if (context.mounted) {
@@ -149,6 +152,7 @@ class HomeScreen extends ConsumerWidget {
 
       final success = await apiService.restoreSchedule(scheduleId, phone);
       if (success) {
+        await storage.remove('cached_schedules'); // Invalidate SWR cache
         ref.invalidate(schedulesProvider);
         ref.invalidate(historySchedulesProvider);
         if (context.mounted) {
@@ -242,7 +246,22 @@ class HomeScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        // Old cross icon button removed. Discontinuation is now handled by the premium button at the bottom of the list.
+                        // Logout action button
+                        IconButton(
+                          icon: const Icon(Icons.logout_rounded, color: AppTheme.primaryColor),
+                          tooltip: 'Logout',
+                          onPressed: () async {
+                            final storage = ref.read(storageServiceProvider);
+                            await storage.remove('phone_number');
+                            await storage.remove('user_name');
+                            await storage.remove('cached_schedules');
+                            ref.invalidate(schedulesProvider);
+                            ref.invalidate(historySchedulesProvider);
+                            if (context.mounted) {
+                              context.go('/onboarding');
+                            }
+                          },
+                        ),
                       ],
                     ),
                   ),

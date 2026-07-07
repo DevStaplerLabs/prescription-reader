@@ -78,7 +78,7 @@ class _GradientButtonState extends State<GradientButton>
         borderRadius: BorderRadius.circular(16),
         gradient: isEnabled
             ? const LinearGradient(
-                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                colors: [AppTheme.accentColor, Color(0xFFE5B600)],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               )
@@ -87,17 +87,11 @@ class _GradientButtonState extends State<GradientButton>
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                  color: AppTheme.accentColor.withValues(alpha: 0.18),
                   blurRadius: 16,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
                 ),
-                BoxShadow(
-                  color: AppTheme.secondaryColor.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 8),
-                )
               ]
             : null,
       ),
@@ -147,7 +141,7 @@ class _GradientButtonState extends State<GradientButton>
                           height: 24,
                           width: 24,
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                             strokeWidth: 2.5,
                           ),
                         )
@@ -161,7 +155,7 @@ class _GradientButtonState extends State<GradientButton>
                             Text(
                               widget.text,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppTheme.primaryColor,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.5,

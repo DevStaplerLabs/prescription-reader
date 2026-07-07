@@ -169,6 +169,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       
       await apiService.confirmPrescription(confirmPayload);
       
+      await storage.remove('cached_schedules'); // Invalidate SWR cache
       ref.invalidate(schedulesProvider);
       
       if (!mounted) return;
