@@ -322,46 +322,34 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   let ocrText = '';
   let fallbackUsed = false;
 
-  // STRATEGY 1: Try Gemini Vision directly (fastest, best quality)
+  // STEP 1: Extract raw text using Google Vision REST API (Primary — as planned)
   try {
-    rawParsed = await parseImageWithGemini(
-      PRESCRIPTION_PARSE_PROMPT,
-      imageBuffer,
-      mimeType
-    );
-    console.log('[nlpService] Gemini Vision successfully parsed the image directly.');
-  } catch (visionError) {
-    console.warn('[nlpService] Gemini Vision failed:', visionError.message);
+    console.log('[nlpService] Extracting text via Google Vision REST API...');
+    ocrText = await extractTextFromImage(imageBuffer);
+    console.log(`[nlpService] Google Vision OCR succeeded. Extracted ${ocrText.length} characters.`);
+  } catch (ocrError) {
+    console.error('[nlpService] Google Vision OCR failed:', ocrError.message);
+  }
 
-    // STRATEGY 2: Use Google Vision REST API to get OCR text, then send to Gemini text model
-    const hasVisionKey = process.env.GOOGLE_VISION_API &&
-      process.env.GOOGLE_VISION_API !== 'your_google_vision_api_key_here' &&
-      process.env.GOOGLE_VISION_API.trim() !== '';
-
-    if (hasVisionKey) {
-      try {
-        console.log('[nlpService] Attempting Google Vision REST API OCR...');
-        ocrText = await extractTextFromImage(imageBuffer);
-        console.log('[nlpService] Vision API OCR succeeded. Text length:', ocrText.length);
-      } catch (ocrError) {
-        console.error('[nlpService] Vision API OCR also failed:', ocrError.message);
-      }
+  if (ocrText && ocrText.trim() !== '') {
+    // STEP 2: Send OCR text to Gemini to structure it into JSON
+    try {
+      rawParsed = await parseTextWithGemini(PRESCRIPTION_PARSE_PROMPT, ocrText);
+      console.log('[nlpService] Gemini structured the OCR text successfully.');
+    } catch (geminiError) {
+      console.warn('[nlpService] Gemini structuring failed, trying regex fallback:', geminiError.message);
+      // STEP 3: Regex fallback if Gemini is unavailable
+      rawParsed = parseTextWithRegex(ocrText);
+      fallbackUsed = true;
     }
-
-    if (ocrText && ocrText.trim() !== '') {
-      // STRATEGY 3: Send OCR text to Gemini text model for structuring
-      try {
-        rawParsed = await parseTextWithGemini(PRESCRIPTION_PARSE_PROMPT, ocrText);
-        console.log('[nlpService] Gemini Text API successfully parsed the OCR text.');
-      } catch (textLLMError) {
-        console.warn('[nlpService] Gemini Text API failed. Running local regex parser fallback...', textLLMError.message);
-        // STRATEGY 4: Local regex-based parsing fallback
-        rawParsed = parseTextWithRegex(ocrText);
-        fallbackUsed = true;
-      }
-    } else {
-      // No OCR text either - throw clear error
-      throw new Error(`Prescription parsing failed: Gemini Vision error (${visionError.message}). Google Vision OCR also unavailable or returned no text.`);
+  } else {
+    // Google Vision failed — try Gemini Vision directly as backup
+    console.warn('[nlpService] Google Vision returned no text. Trying Gemini Vision direct parse...');
+    try {
+      rawParsed = await parseImageWithGemini(PRESCRIPTION_PARSE_PROMPT, imageBuffer, mimeType);
+      console.log('[nlpService] Gemini Vision direct parse succeeded.');
+    } catch (geminiVisionError) {
+      throw new Error(`All parsing methods failed. Google Vision: no text. Gemini Vision: ${geminiVisionError.message}`);
     }
   }
 
@@ -369,7 +357,7 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   const { data, warnings } = validateParsedData(rawParsed);
 
   if (fallbackUsed) {
-    warnings.push('Parsing performed by rule-based fallback parser (Gemini API was unavailable). Some fields may need manual correction.');
+    warnings.push('Gemini API unavailable — parsed using rule-based fallback. Some fields may need manual correction.');
   }
 
   if (warnings.length > 0) {
@@ -377,7 +365,6 @@ export const parsePrescriptionImage = async (imageBuffer, mimeType = 'image/jpeg
   }
 
   console.log(`[nlpService] Successfully parsed ${data.medications.length} medication(s).`);
-
   return { data, warnings };
 };
 
