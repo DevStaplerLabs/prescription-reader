@@ -30,8 +30,20 @@ final schedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>
   return apiService.getActiveSchedules(phone);
 });
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Always fetch fresh when this screen is first built
+     Future.microtask(() => ref.refresh(schedulesProvider));
+  }
 
   String _getTimeBasedGreeting() {
     final hour = DateTime.now().hour;
@@ -151,7 +163,7 @@ class HomeScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final schedulesAsyncValue = ref.watch(schedulesProvider);
     final userNameAsync = ref.watch(userNameProvider);
     final userName = userNameAsync.value ?? 'User';
