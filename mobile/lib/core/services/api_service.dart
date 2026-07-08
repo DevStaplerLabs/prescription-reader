@@ -7,8 +7,8 @@ final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 40),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(minutes: 2),
     ),
   );
 
