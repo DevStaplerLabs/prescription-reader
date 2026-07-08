@@ -17,8 +17,13 @@ final userNameProvider = FutureProvider.autoDispose<String>((ref) async {
 final historySchedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final apiService = ref.read(apiServiceProvider);
   final storage = ref.read(storageServiceProvider);
-  final phone = await storage.read('phone_number') as String? ?? '';
+  String phone = await storage.read('phone_number') as String? ?? '';
   if (phone.isEmpty) return [];
+  
+  phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  if (!phone.startsWith('91') && phone.length == 10) {
+    phone = '91$phone';
+  }
   return apiService.getHistorySchedules(phone);
 });
 
@@ -26,7 +31,13 @@ final historySchedulesProvider = FutureProvider.autoDispose<List<Map<String, dyn
 final schedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final storage = ref.read(storageServiceProvider);
   final apiService = ref.read(apiServiceProvider);
-  final phone = await storage.read('phone_number') as String? ?? '';
+  String phone = await storage.read('phone_number') as String? ?? '';
+  if (phone.isEmpty) return [];
+  
+  phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+  if (!phone.startsWith('91') && phone.length == 10) {
+    phone = '91$phone';
+  }
   return apiService.getActiveSchedules(phone);
 });
 
