@@ -108,12 +108,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> with SingleTickerProvid
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Scan Prescription',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.primaryColor,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Scan Prescription',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: AppTheme.primaryColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       // Help Circle Button

@@ -585,12 +585,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  "Next appointment: Jul 3, 2026 — Dr. Sharma",
-                  style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    "Next appointment: Jul 3, 2026 — Dr. Sharma",
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

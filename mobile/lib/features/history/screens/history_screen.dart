@@ -99,13 +99,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Prescription History',
-                      style: GoogleFonts.plusJakartaSans(
-                        color: AppTheme.primaryColor,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                    Expanded(
+                      child: Text(
+                        'Prescription History',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.primaryColor,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     // StaplerLabs Logo integrated into header
