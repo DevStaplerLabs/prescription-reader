@@ -116,6 +116,18 @@ const validateParsedData = (parsed) => {
       }
     }
 
+    // Sanitize mealInstruction to only allow valid enum values
+    const VALID_MEAL_INSTRUCTIONS = ['before', 'after', 'with'];
+    if (!VALID_MEAL_INSTRUCTIONS.includes(med.mealInstruction)) {
+      med.mealInstruction = null;
+    }
+
+    // Sanitize route to only allow valid enum values
+    const VALID_ROUTES = ['oral', 'topical', 'injection'];
+    if (!VALID_ROUTES.includes(med.route)) {
+      med.route = null;
+    }
+
     return med;
   });
 
@@ -416,6 +428,16 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + durationDays);
 
+    // Sanitize enum fields to only allow values accepted by the Schedule model
+    const VALID_MEAL_INSTRUCTIONS = ['before', 'after', 'with'];
+    const VALID_ROUTES = ['oral', 'topical', 'injection'];
+
+    const mealInstruction = VALID_MEAL_INSTRUCTIONS.includes(med.mealInstruction)
+      ? med.mealInstruction
+      : null;
+
+    const route = VALID_ROUTES.includes(med.route) ? med.route : null;
+
     return {
       drugName: med.drugName,
       form: med.form,
@@ -423,8 +445,8 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
       scheduledTimes,
       startDate: new Date(startDate),
       endDate,
-      mealInstruction: med.mealInstruction,
-      route: med.route,
+      mealInstruction,
+      route,
       specialInstructions: med.specialInstructions || null,
     };
   });
