@@ -139,10 +139,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       final apiService = ref.read(apiServiceProvider);
       final storage = ref.read(storageServiceProvider);
-      final phone = await storage.read('phone_number') as String? ?? '';
+      String phone = await storage.read('phone_number') as String? ?? '';
 
       if (phone.isEmpty) {
         throw Exception('User phone number not found.');
+      }
+
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      if (!phone.startsWith('91') && phone.length == 10) {
+        phone = '91$phone';
       }
 
       final success = await apiService.restoreSchedule(scheduleId, phone);
