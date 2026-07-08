@@ -5,7 +5,7 @@ dotenv.config();
 
 import { parsePrescriptionImage } from './src/services/nlpService.js';
 
-const IMG = 'C:\\Users\\ASUS\\.gemini\\antigravity-ide\\brain\\4614b97a-7657-4e67-8091-94d5d113d38d\\media__1783432806669.png';
+const IMG = path.resolve('../dataset/prescription.jpg');
 
 async function testLocal() {
   console.log('--- LOCAL TEST START ---');

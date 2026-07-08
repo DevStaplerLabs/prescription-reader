@@ -23,7 +23,7 @@ const getClient = () => {
 export const parseImageWithGemini = async (prompt, imageBuffer, mimeType = 'image/jpeg') => {
   const client = getClient();
   const model = client.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
     },
@@ -71,7 +71,7 @@ export const parseImageWithGemini = async (prompt, imageBuffer, mimeType = 'imag
 export const parseTextWithGemini = async (prompt, ocrText) => {
   const client = getClient();
   const model = client.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
     },
