@@ -1032,12 +1032,12 @@ class _TestReminderButtonState extends State<_TestReminderButton> {
         phone = '91$phone';
       }
 
-      final success = await apiService.sendTestReminder(phone);
-      if (success && context.mounted) {
+      final message = await apiService.sendTestReminder(phone);
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Test reminder sent successfully via WhatsApp! 🔔',
+              message,
               style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             backgroundColor: AppTheme.successColor,
@@ -1045,8 +1045,6 @@ class _TestReminderButtonState extends State<_TestReminderButton> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-      } else {
-        throw Exception('Request failed.');
       }
     } catch (e) {
       if (context.mounted) {
