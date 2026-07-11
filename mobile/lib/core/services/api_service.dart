@@ -233,22 +233,6 @@ class ApiService {
     }
   }
 
-  // Send a manual test WhatsApp reminder
-  Future<String> sendTestReminder(String patientPhone) async {
-    try {
-      final response = await _dio.post(
-        '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/test-reminder',
-        data: {'patientPhone': patientPhone},
-      );
-      if (response.statusCode == 200) {
-        return response.data['message'] as String? ?? 'Reminder triggered successfully.';
-      }
-      throw Exception('Server returned status ${response.statusCode}');
-    } catch (e) {
-      throw Exception('API Test Reminder Error: $e');
-    }
-  }
-
   // Log adherence in memory for mock simulation
   Future<bool> logAdherence(String id, String newStatus) async {
     _adherenceStore[id] = newStatus;
