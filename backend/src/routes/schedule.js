@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Schedule from '../models/Schedule.js';
+import { sendMedicationReminder } from '../services/notificationService.js';
 
 const router = express.Router();
 
@@ -144,6 +145,58 @@ router.post('/:id/restore', async (req, res, next) => {
     } catch (fallbackErr) {
       next(fallbackErr);
     }
+  }
+});
+
+// POST /api/schedules/test-reminder - Send a manual test reminder to the patient's phone
+router.post('/test-reminder', async (req, res, next) => {
+  try {
+    const { patientPhone } = req.body;
+    if (!patientPhone) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'patientPhone is required.',
+      });
+    }
+
+    // Find the currently active schedule for this patient
+    const activeSchedule = await Schedule.findOne({ patientPhone, isActive: true }).populate('prescriptionId');
+
+    let drugName = 'Test Medication';
+    let dosage = '1 Tablet';
+    let patientName = 'Patient';
+
+    if (activeSchedule && activeSchedule.medications && activeSchedule.medications.length > 0) {
+      const firstMed = activeSchedule.medications[0];
+      drugName = firstMed.drugName || drugName;
+      dosage = firstMed.dosage || (firstMed.form ? `1 ${firstMed.form}` : '1 Tablet');
+      patientName = activeSchedule.prescriptionId?.extractedData?.patient?.name || patientName;
+    }
+
+    const timeStr = new Date().toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    console.log(`[Manual Test Reminder] Dispatching test reminder to ${patientName} (${patientPhone}) for ${drugName}...`);
+
+    await sendMedicationReminder(
+      patientPhone,
+      patientName,
+      drugName,
+      dosage,
+      timeStr,
+      'medication_reminder'
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Test reminder sent successfully via WhatsApp!',
+    });
+  } catch (error) {
+    next(error);
   }
 });
 
