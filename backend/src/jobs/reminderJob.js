@@ -32,6 +32,12 @@ export const checkAndSendReminders = async () => {
           startDate: { $lte: todayEnd },
           endDate: { $gte: todayStart },
           scheduledTimes: currentTimeStr,
+          $or: [
+            { reminderEnabled: true },
+            // Schedules created before the reminder switch was introduced
+            // remain active until a user chooses to pause them.
+            { reminderEnabled: { $exists: false } },
+          ],
         },
       },
     }).populate('prescriptionId');
@@ -51,7 +57,7 @@ export const checkAndSendReminders = async () => {
       const matchingMeds = schedule.medications.filter((med) => {
         const inDateRange = med.startDate <= todayEnd && med.endDate >= todayStart;
         const matchesTime = med.scheduledTimes.includes(currentTimeStr);
-        return inDateRange && matchesTime;
+        return med.reminderEnabled !== false && inDateRange && matchesTime;
       });
 
       for (const med of matchingMeds) {

@@ -20,10 +20,7 @@ class ApiService {
     try {
       final fileName = filePath.split('/').last;
       final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          filePath,
-          filename: fileName,
-        ),
+        'image': await MultipartFile.fromFile(filePath, filename: fileName),
       });
 
       final response = await _dio.post(
@@ -44,7 +41,8 @@ class ApiService {
             final freq = med['frequency'] as Map<String, dynamic>?;
             String freqStr = '1-0-1'; // fallback
             if (freq != null) {
-              freqStr = '${freq['morning'] ?? 0}-${freq['afternoon'] ?? 0}-${freq['night'] ?? 0}';
+              freqStr =
+                  '${freq['morning'] ?? 0}-${freq['afternoon'] ?? 0}-${freq['night'] ?? 0}';
             }
 
             // Duration value
@@ -54,9 +52,11 @@ class ApiService {
               final val = duration['value'];
               final unit = duration['unit']?.toString() ?? 'days';
               if (unit == 'weeks') {
-                durationDays = ((int.tryParse(val.toString()) ?? 1) * 7).toString();
+                durationDays = ((int.tryParse(val.toString()) ?? 1) * 7)
+                    .toString();
               } else if (unit == 'months') {
-                durationDays = ((int.tryParse(val.toString()) ?? 1) * 30).toString();
+                durationDays = ((int.tryParse(val.toString()) ?? 1) * 30)
+                    .toString();
               } else {
                 durationDays = val.toString();
               }
@@ -83,11 +83,14 @@ class ApiService {
           return {
             'rawOcrText': data['rawOcrText'] ?? '',
             'extractedMedicines': extractedMedicines,
-            'parsedData': parsedData, // Store the original parsedData for confirming
+            'parsedData':
+                parsedData, // Store the original parsedData for confirming
           };
         }
       }
-      throw Exception(response.data?['message'] ?? 'Failed to parse prescription');
+      throw Exception(
+        response.data?['message'] ?? 'Failed to parse prescription',
+      );
     } catch (e) {
       throw Exception('API Error: $e');
     }
@@ -111,7 +114,9 @@ class ApiService {
   }
 
   // Get active schedules from database
-  Future<List<Map<String, dynamic>>> getActiveSchedules(String patientPhone) async {
+  Future<List<Map<String, dynamic>>> getActiveSchedules(
+    String patientPhone,
+  ) async {
     try {
       final response = await _dio.get(
         '${AppConstants.baseUrl}${AppConstants.activeSchedulesEndpoint}',
@@ -143,12 +148,13 @@ class ApiService {
 
             for (var t in times) {
               final timeStr = t.toString();
+              final hour = int.tryParse(timeStr.split(':').first) ?? 8;
               String timeGroup = 'Morning';
-              if (timeStr == '08:00') {
+              if (hour < 12) {
                 timeGroup = 'Morning';
-              } else if (timeStr == '14:00') {
+              } else if (hour < 17) {
                 timeGroup = 'Afternoon';
-              } else if (timeStr == '21:00') {
+              } else {
                 timeGroup = 'Night';
               }
 
@@ -159,9 +165,15 @@ class ApiService {
               flatList.add({
                 'id': doseId,
                 'scheduleId': schedule['_id']?.toString() ?? '',
+                'medicationId': med['_id']?.toString() ?? '',
                 'drugName': drugName,
                 'dosage': dosage,
                 'time': timeGroup,
+                'scheduledTime': timeStr,
+                'scheduledTimes': times.map((time) => time.toString()).toList(),
+                'reminderEnabled': med['reminderEnabled'] != false,
+                'startDate': med['startDate']?.toString(),
+                'endDate': med['endDate']?.toString(),
                 'instruction': mealInst,
                 'status': status,
               });
@@ -196,7 +208,9 @@ class ApiService {
   }
 
   // Get past inactive schedules history for a patient
-  Future<List<Map<String, dynamic>>> getHistorySchedules(String patientPhone) async {
+  Future<List<Map<String, dynamic>>> getHistorySchedules(
+    String patientPhone,
+  ) async {
     try {
       final response = await _dio.get(
         '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/history',
@@ -231,6 +245,43 @@ class ApiService {
     } catch (e) {
       throw Exception('API Restore Error: $e');
     }
+  }
+
+  Future<void> updateMedicationReminder({
+    required String scheduleId,
+    required String medicationId,
+    required bool reminderEnabled,
+    required List<String> scheduledTimes,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        '${AppConstants.baseUrl}${AppConstants.schedulesEndpoint}/$scheduleId/medications/$medicationId',
+        data: {
+          'reminderEnabled': reminderEnabled,
+          'scheduledTimes': scheduledTimes,
+          'startDate': _dateOnly(startDate),
+          'endDate': _dateOnly(endDate),
+        },
+      );
+
+      if (response.statusCode != 200 || response.data?['status'] != 'success') {
+        throw Exception(
+          response.data?['message'] ??
+              'Could not update this medication reminder.',
+        );
+      }
+    } catch (e) {
+      throw Exception('API Reminder Update Error: $e');
+    }
+  }
+
+  String _dateOnly(DateTime value) {
+    final local = value.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day';
   }
 
   // Log adherence in memory for mock simulation

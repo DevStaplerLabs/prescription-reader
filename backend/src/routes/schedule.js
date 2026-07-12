@@ -4,6 +4,10 @@ import Schedule from '../models/Schedule.js';
 
 const router = express.Router();
 
+const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+
+const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+
 // GET /api/schedules/active - Get the currently active medication schedule for a patient
 router.get('/active', async (req, res, next) => {
   try {
@@ -47,6 +51,84 @@ router.patch('/:id/deactivate', async (req, res, next) => {
     return res.status(200).json({
       status: 'success',
       message: 'Schedule discontinued successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/schedules/:id/medications/:medicationId - Update reminder settings for one medication
+router.patch('/:id/medications/:medicationId', async (req, res, next) => {
+  try {
+    const { id, medicationId } = req.params;
+    const { reminderEnabled, scheduledTimes, startDate, endDate } = req.body;
+
+    if (!hasOwn(req.body, 'reminderEnabled') && !hasOwn(req.body, 'scheduledTimes') &&
+        !hasOwn(req.body, 'startDate') && !hasOwn(req.body, 'endDate')) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Provide at least one reminder setting to update.',
+      });
+    }
+
+    if (hasOwn(req.body, 'reminderEnabled') && typeof reminderEnabled !== 'boolean') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'reminderEnabled must be a boolean.',
+      });
+    }
+
+    if (hasOwn(req.body, 'scheduledTimes')) {
+      if (!Array.isArray(scheduledTimes) || scheduledTimes.length === 0 ||
+          scheduledTimes.some((time) => typeof time !== 'string' || !timePattern.test(time))) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'scheduledTimes must contain one or more times in HH:MM format.',
+        });
+      }
+    }
+
+    const parsedStartDate = hasOwn(req.body, 'startDate') ? new Date(startDate) : null;
+    const parsedEndDate = hasOwn(req.body, 'endDate') ? new Date(endDate) : null;
+    if ((parsedStartDate && Number.isNaN(parsedStartDate.getTime())) ||
+        (parsedEndDate && Number.isNaN(parsedEndDate.getTime()))) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'startDate and endDate must be valid dates.',
+      });
+    }
+
+    const schedule = await Schedule.findOne({ _id: id, 'medications._id': medicationId });
+    if (!schedule) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Medication schedule not found.',
+      });
+    }
+
+    const medication = schedule.medications.id(medicationId);
+    const nextStartDate = parsedStartDate || medication.startDate;
+    const nextEndDate = parsedEndDate || medication.endDate;
+    if (nextStartDate > nextEndDate) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'End date must be on or after the start date.',
+      });
+    }
+
+    if (hasOwn(req.body, 'reminderEnabled')) medication.reminderEnabled = reminderEnabled;
+    if (hasOwn(req.body, 'scheduledTimes')) {
+      medication.scheduledTimes = [...new Set(scheduledTimes)].sort();
+    }
+    if (parsedStartDate) medication.startDate = parsedStartDate;
+    if (parsedEndDate) medication.endDate = parsedEndDate;
+
+    await schedule.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Medication reminder updated successfully.',
+      data: { medication },
     });
   } catch (error) {
     next(error);

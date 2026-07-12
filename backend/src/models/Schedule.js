@@ -5,6 +5,10 @@ const scheduledMedicationSchema = new mongoose.Schema({
   form: { type: String, default: null },
   dosage: { type: String, default: null },
   scheduledTimes: [{ type: String }], // ["08:00", "21:00"]
+  // Controls whether this medication participates in the reminder job. Keeping
+  // it on the medication lets a patient pause one medicine without cancelling
+  // their entire prescription schedule.
+  reminderEnabled: { type: Boolean, default: true },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   mealInstruction: {

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../widgets/medication_reminder_editor.dart';
 
 // Riverpod Provider to load the user's name
 final userNameProvider = FutureProvider.autoDispose<String>((ref) async {
@@ -14,32 +15,34 @@ final userNameProvider = FutureProvider.autoDispose<String>((ref) async {
 });
 
 // Riverpod Provider to fetch historical inactive schedules
-final historySchedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final apiService = ref.read(apiServiceProvider);
-  final storage = ref.read(storageServiceProvider);
-  String phone = await storage.read('phone_number') as String? ?? '';
-  if (phone.isEmpty) return [];
-  
-  phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-  if (!phone.startsWith('91') && phone.length == 10) {
-    phone = '91$phone';
-  }
-  return apiService.getHistorySchedules(phone);
-});
+final historySchedulesProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final apiService = ref.read(apiServiceProvider);
+      final storage = ref.read(storageServiceProvider);
+      String phone = await storage.read('phone_number') as String? ?? '';
+      if (phone.isEmpty) return [];
+
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      if (!phone.startsWith('91') && phone.length == 10) {
+        phone = '91$phone';
+      }
+      return apiService.getHistorySchedules(phone);
+    });
 
 // Riverpod Provider to fetch active schedules — simple FutureProvider that always fetches fresh
-final schedulesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final storage = ref.read(storageServiceProvider);
-  final apiService = ref.read(apiServiceProvider);
-  String phone = await storage.read('phone_number') as String? ?? '';
-  if (phone.isEmpty) return [];
-  
-  phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
-  if (!phone.startsWith('91') && phone.length == 10) {
-    phone = '91$phone';
-  }
-  return apiService.getActiveSchedules(phone);
-});
+final schedulesProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final storage = ref.read(storageServiceProvider);
+      final apiService = ref.read(apiServiceProvider);
+      String phone = await storage.read('phone_number') as String? ?? '';
+      if (phone.isEmpty) return [];
+
+      phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+      if (!phone.startsWith('91') && phone.length == 10) {
+        phone = '91$phone';
+      }
+      return apiService.getActiveSchedules(phone);
+    });
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -53,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     // Always fetch fresh when this screen is first built
-     Future.microtask(() => ref.refresh(schedulesProvider));
+    Future.microtask(() => ref.refresh(schedulesProvider));
   }
 
   String _getTimeBasedGreeting() {
@@ -69,7 +72,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _confirmDiscontinue(BuildContext context, WidgetRef ref, String scheduleId) async {
+  Future<void> _confirmDiscontinue(
+    BuildContext context,
+    WidgetRef ref,
+    String scheduleId,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -117,7 +124,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Active schedule discontinued.', style: GoogleFonts.plusJakartaSans()),
+              content: Text(
+                'Active schedule discontinued.',
+                style: GoogleFonts.plusJakartaSans(),
+              ),
               backgroundColor: AppTheme.successColor,
             ),
           );
@@ -126,7 +136,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to discontinue: $e', style: GoogleFonts.plusJakartaSans()),
+              content: Text(
+                'Failed to discontinue: $e',
+                style: GoogleFonts.plusJakartaSans(),
+              ),
               backgroundColor: AppTheme.dangerColor,
             ),
           );
@@ -135,7 +148,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Future<void> _restorePastSchedule(BuildContext context, WidgetRef ref, String scheduleId) async {
+  Future<void> _restorePastSchedule(
+    BuildContext context,
+    WidgetRef ref,
+    String scheduleId,
+  ) async {
     try {
       final apiService = ref.read(apiServiceProvider);
       final storage = ref.read(storageServiceProvider);
@@ -158,7 +175,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Schedule restored successfully!', style: GoogleFonts.plusJakartaSans()),
+              content: Text(
+                'Schedule restored successfully!',
+                style: GoogleFonts.plusJakartaSans(),
+              ),
               backgroundColor: AppTheme.successColor,
             ),
           );
@@ -170,11 +190,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to restore: $e', style: GoogleFonts.plusJakartaSans()),
+            content: Text(
+              'Failed to restore: $e',
+              style: GoogleFonts.plusJakartaSans(),
+            ),
             backgroundColor: AppTheme.dangerColor,
           ),
         );
       }
+    }
+  }
+
+  Future<void> _openMedicationEditor(Map<String, dynamic> medication) async {
+    final updated = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => MedicationReminderEditor(medication: medication),
+    );
+
+    if (updated == true) {
+      ref.invalidate(schedulesProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Medication reminder updated.',
+            style: GoogleFonts.plusJakartaSans(),
+          ),
+          backgroundColor: AppTheme.successColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -191,7 +241,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ref.invalidate(schedulesProvider);
           ref.invalidate(historySchedulesProvider);
           // Wait for provider to rebuild
-          await ref.read(schedulesProvider.future).catchError((_) => <Map<String, dynamic>>[]);
+          await ref
+              .read(schedulesProvider.future)
+              .catchError((_) => <Map<String, dynamic>>[]);
         },
         child: schedulesAsyncValue.when(
           data: (schedules) {
@@ -211,14 +263,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               slivers: [
                 // Glowing Gradient Header Sliver
-                SliverToBoxAdapter(
-                  child: _buildHeader(context),
-                ),
-                
+                SliverToBoxAdapter(child: _buildHeader(context)),
+
                 // Welcome Greeting and Today Date Section
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 28.0, bottom: 8.0),
+                    padding: const EdgeInsets.only(
+                      left: 24.0,
+                      right: 24.0,
+                      top: 28.0,
+                      bottom: 8.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,7 +305,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         // Logout action button
                         IconButton(
-                          icon: const Icon(Icons.logout_rounded, color: AppTheme.primaryColor),
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: AppTheme.primaryColor,
+                          ),
                           tooltip: 'Logout',
                           onPressed: () async {
                             final storage = ref.read(storageServiceProvider);
@@ -272,20 +330,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Grouped Cards List (Neumorphic floating cards)
                 if (schedules.isNotEmpty)
                   SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final timeGroup = grouped.keys.toList()[index];
-                        final list = grouped[timeGroup]!;
-                        return _buildGroupedCard(context, ref, timeGroup, list);
-                      },
-                      childCount: grouped.keys.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final timeGroup = grouped.keys.toList()[index];
+                      final list = grouped[timeGroup]!;
+                      return _buildGroupedCard(context, ref, timeGroup, list);
+                    }, childCount: grouped.keys.length),
                   ),
 
                 if (schedules.isNotEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 24, right: 24, top: 12, bottom: 24),
+                      padding: const EdgeInsets.only(
+                        left: 24,
+                        right: 24,
+                        top: 12,
+                        bottom: 24,
+                      ),
                       child: _DiscontinueAnimatedButton(
                         onTap: () => _confirmDiscontinue(
                           context,
@@ -295,12 +355,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
-                
+
                 // Empty state and Past Schedule History list
                 if (schedules.isEmpty)
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 16.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -308,9 +371,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.05,
+                              ),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
+                              border: Border.all(
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.15,
+                                ),
+                              ),
                             ),
                             child: Column(
                               children: [
@@ -349,121 +418,170 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          ref.watch(historySchedulesProvider).when(
-                            data: (history) {
-                              if (history.isEmpty) {
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 24.0),
-                                  child: Center(
-                                    child: Text(
-                                      'No prescription history found.',
-                                      style: GoogleFonts.plusJakartaSans(color: Colors.grey),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: history.length,
-                                itemBuilder: (context, index) {
-                                  final pastSchedule = history[index];
-                                  final extData = pastSchedule['prescriptionId']?['extractedData'];
-                                  final clinic = extData?['clinicName'] ?? 'Clinic';
-                                  final doctor = extData?['doctorName'] ?? 'Doctor';
-                                  final meds = pastSchedule['medications'] as List<dynamic>? ?? [];
+                          ref
+                              .watch(historySchedulesProvider)
+                              .when(
+                                data: (history) {
+                                  if (history.isEmpty) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 24.0,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'No prescription history found.',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: history.length,
+                                    itemBuilder: (context, index) {
+                                      final pastSchedule = history[index];
+                                      final extData =
+                                          pastSchedule['prescriptionId']?['extractedData'];
+                                      final clinic =
+                                          extData?['clinicName'] ?? 'Clinic';
+                                      final doctor =
+                                          extData?['doctorName'] ?? 'Doctor';
+                                      final meds =
+                                          pastSchedule['medications']
+                                              as List<dynamic>? ??
+                                          [];
 
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: Colors.grey.shade100),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.02),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 4),
+                                      return Container(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 12,
                                         ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '$clinic — Dr. $doctor',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: const Color(0xFF1E293B),
-                                                ),
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.grey.shade100,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.02,
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '${meds.length} medication(s)',
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade500,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () => _restorePastSchedule(
-                                            context,
-                                            ref,
-                                            pastSchedule['_id'] as String,
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppTheme.primaryColor,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                            minimumSize: Size.zero,
-                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          ),
-                                          child: Text(
-                                            'Restore',
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '$clinic — Dr. $doctor',
+                                                    style:
+                                                        GoogleFonts.plusJakartaSans(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 14,
+                                                          color: const Color(
+                                                            0xFF1E293B,
+                                                          ),
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    '${meds.length} medication(s)',
+                                                    style:
+                                                        GoogleFonts.plusJakartaSans(
+                                                          fontSize: 12,
+                                                          color: Colors
+                                                              .grey
+                                                              .shade500,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  _restorePastSchedule(
+                                                    context,
+                                                    ref,
+                                                    pastSchedule['_id']
+                                                        as String,
+                                                  ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.primaryColor,
+                                                foregroundColor: Colors.white,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 8,
+                                                    ),
+                                                minimumSize: Size.zero,
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'Restore',
+                                                style:
+                                                    GoogleFonts.plusJakartaSans(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   );
                                 },
-                              );
-                            },
-                            loading: () => const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24.0),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                                loading: () => const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                error: (err, _) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 24.0,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Error loading history: $err',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        color: AppTheme.dangerColor,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            error: (err, _) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24.0),
-                              child: Center(
-                                child: Text(
-                                  'Error loading history: $err',
-                                  style: GoogleFonts.plusJakartaSans(color: AppTheme.dangerColor),
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
-                
+
                 const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],
             );
@@ -520,7 +638,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
-                    )
+                    ),
                   ],
                 ),
                 child: ClipRRect(
@@ -558,7 +676,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Appointment pill/chip container with glowing dot
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -585,7 +703,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         color: AppTheme.primaryColor,
                         blurRadius: 4,
                         spreadRadius: 0.5,
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -610,11 +728,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildGroupedCard(BuildContext context, WidgetRef ref, String timeGroup, List<Map<String, dynamic>> items) {
+  Widget _buildGroupedCard(
+    BuildContext context,
+    WidgetRef ref,
+    String timeGroup,
+    List<Map<String, dynamic>> items,
+  ) {
     // Determine the icon and text based on the group
     String headerText = timeGroup;
-    Widget groupIcon = const Icon(Icons.wb_sunny_outlined, color: AppTheme.primaryColor);
-    
+    Widget groupIcon = const Icon(
+      Icons.wb_sunny_outlined,
+      color: AppTheme.primaryColor,
+    );
+
     if (timeGroup.toLowerCase() == 'morning') {
       headerText = 'Morning';
       groupIcon = const Text('🌅 ', style: TextStyle(fontSize: 18));
@@ -651,7 +777,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: Colors.black.withValues(alpha: 0.01),
             blurRadius: 1,
             spreadRadius: 0.5,
-          )
+          ),
         ],
       ),
       child: Column(
@@ -659,7 +785,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           // Time-of-day Header
           Padding(
-            padding: const EdgeInsets.only(left: 18.0, right: 18.0, top: 18.0, bottom: 8.0),
+            padding: const EdgeInsets.only(
+              left: 18.0,
+              right: 18.0,
+              top: 18.0,
+              bottom: 8.0,
+            ),
             child: Row(
               children: [
                 groupIcon,
@@ -675,7 +806,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          
+
           // List of medicines inside this group
           Column(
             children: List.generate(items.length, (index) {
@@ -683,13 +814,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               return Column(
                 children: [
                   if (index > 0)
-                    Divider(height: 1, color: Colors.grey.shade100, indent: 18, endIndent: 18),
-                  
+                    Divider(
+                      height: 1,
+                      color: Colors.grey.shade100,
+                      indent: 18,
+                      endIndent: 18,
+                    ),
+
                   // Medicine List Row with animated scale interaction
                   _HomeMedicationRow(
                     schedule: schedule,
-                    statusChip: _buildStatusChip(schedule['status'] as String? ?? 'pending'),
-                    onTap: () => _showStatusBottomSheet(context, ref, schedule['id']),
+                    statusChip: _buildStatusChip(
+                      schedule['status'] as String? ?? 'pending',
+                    ),
+                    onTap: () =>
+                        _showStatusBottomSheet(context, ref, schedule['id']),
+                    onManage: () => _openMedicationEditor(schedule),
                   ),
                 ],
               );
@@ -736,7 +876,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             color: fg.withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 3),
-          )
+          ),
         ],
       ),
       child: Text(
@@ -752,16 +892,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   String _getTodayDateString() {
     final now = DateTime.now();
-    final days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+    final days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
     final dayOfWeek = days[now.weekday % 7];
     final monthStr = months[now.month - 1];
-    
+
     return "TODAY • $dayOfWeek, $monthStr ${now.day}";
   }
 
-  void _showStatusBottomSheet(BuildContext context, WidgetRef ref, String scheduleId) {
+  void _showStatusBottomSheet(
+    BuildContext context,
+    WidgetRef ref,
+    String scheduleId,
+  ) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -871,11 +1036,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 class _HomeMedicationRow extends StatefulWidget {
   final Map<String, dynamic> schedule;
   final VoidCallback onTap;
+  final VoidCallback onManage;
   final Widget statusChip;
 
   const _HomeMedicationRow({
     required this.schedule,
     required this.onTap,
+    required this.onManage,
     required this.statusChip,
   });
 
@@ -900,7 +1067,10 @@ class _HomeMedicationRowState extends State<_HomeMedicationRow> {
           onTapCancel: () => setState(() => _scale = 1.0),
           onTap: widget.onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 15.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18.0,
+              vertical: 15.0,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -917,7 +1087,7 @@ class _HomeMedicationRowState extends State<_HomeMedicationRow> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.schedule['instruction'] as String? ?? 'After food',
+                        '${widget.schedule['instruction'] as String? ?? 'After food'}${widget.schedule['reminderEnabled'] == false ? ' · Reminders off' : ''}',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 13,
                           color: Colors.grey.shade500,
@@ -925,6 +1095,15 @@ class _HomeMedicationRowState extends State<_HomeMedicationRow> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                IconButton(
+                  tooltip: 'Edit medication reminder',
+                  onPressed: widget.onManage,
+                  icon: const Icon(
+                    Icons.tune_rounded,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
                 widget.statusChip,
@@ -943,10 +1122,12 @@ class _DiscontinueAnimatedButton extends StatefulWidget {
   const _DiscontinueAnimatedButton({required this.onTap});
 
   @override
-  State<_DiscontinueAnimatedButton> createState() => _DiscontinueAnimatedButtonState();
+  State<_DiscontinueAnimatedButton> createState() =>
+      _DiscontinueAnimatedButtonState();
 }
 
-class _DiscontinueAnimatedButtonState extends State<_DiscontinueAnimatedButton> {
+class _DiscontinueAnimatedButtonState
+    extends State<_DiscontinueAnimatedButton> {
   bool _isHovered = false;
   bool _isPressed = false;
 
@@ -970,7 +1151,9 @@ class _DiscontinueAnimatedButtonState extends State<_DiscontinueAnimatedButton> 
           ),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           decoration: BoxDecoration(
-            color: _isHovered ? AppTheme.dangerColor.withValues(alpha: 0.05) : Colors.transparent,
+            color: _isHovered
+                ? AppTheme.dangerColor.withValues(alpha: 0.05)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: AppTheme.dangerColor.withValues(alpha: 0.35),
