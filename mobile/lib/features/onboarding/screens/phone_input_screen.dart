@@ -64,7 +64,9 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
           ),
           backgroundColor: AppTheme.dangerColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -78,7 +80,9 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
           ),
           backgroundColor: AppTheme.dangerColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -93,22 +97,24 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
           ),
           backgroundColor: AppTheme.warningColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
     }
 
     setState(() => _isLoading = true);
-    
+
     // Save to storage
     final storage = ref.read(storageServiceProvider);
     await storage.save('phone_number', phone);
     await storage.save('user_name', name);
-    
+
     // Small delay for UX
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     if (!mounted) return;
     context.go('/'); // Proceed to home
   }
@@ -132,7 +138,10 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
               physics: const ClampingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
@@ -202,7 +211,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                         // Pulsing, Glowing Concentric Signal Smartphone Graphic
                         const _GlowingPhoneGraphic(),
                         const SizedBox(height: 24),
-                        
+
                         // Title
                         Text(
                           'Enter your phone number',
@@ -215,7 +224,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 12),
-                        
+
                         // Subtitle
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -239,15 +248,17 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: _isNameFocused 
-                                  ? AppTheme.primaryColor 
-                                  : Colors.grey.shade200, 
+                              color: _isNameFocused
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey.shade200,
                               width: _isNameFocused ? 1.8 : 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: _isNameFocused
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.05)
+                                    ? AppTheme.primaryColor.withValues(
+                                        alpha: 0.05,
+                                      )
                                     : Colors.black.withValues(alpha: 0.03),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
@@ -256,7 +267,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                                 color: Colors.white,
                                 blurRadius: 4,
                                 offset: Offset(-2, -2),
-                              )
+                              ),
                             ],
                           ),
                           child: Row(
@@ -311,15 +322,17 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: _isPhoneFocused 
-                                  ? AppTheme.primaryColor 
-                                  : Colors.grey.shade200, 
+                              color: _isPhoneFocused
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey.shade200,
                               width: _isPhoneFocused ? 1.8 : 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: _isPhoneFocused
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.05)
+                                    ? AppTheme.primaryColor.withValues(
+                                        alpha: 0.05,
+                                      )
                                     : Colors.black.withValues(alpha: 0.03),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
@@ -328,7 +341,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                                 color: Colors.white,
                                 blurRadius: 4,
                                 offset: Offset(-2, -2),
-                              )
+                              ),
                             ],
                           ),
                           child: Row(
@@ -365,7 +378,8 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                                       color: Colors.grey.shade400,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    filled: false, // Ensure no background fill on focus
+                                    filled:
+                                        false, // Ensure no background fill on focus
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
@@ -380,24 +394,29 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
 
                         // DPDP Consent Checkbox Card (glowing borders)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: _isDpdpAgreed 
-                                  ? AppTheme.primaryColor.withValues(alpha: 0.4) 
-                                  : Colors.grey.shade200, 
+                              color: _isDpdpAgreed
+                                  ? AppTheme.primaryColor.withValues(alpha: 0.4)
+                                  : Colors.grey.shade200,
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: _isDpdpAgreed 
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.05) 
+                                color: _isDpdpAgreed
+                                    ? AppTheme.primaryColor.withValues(
+                                        alpha: 0.05,
+                                      )
                                     : Colors.black.withValues(alpha: 0.01),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
-                              )
+                              ),
                             ],
                           ),
                           child: Row(
@@ -444,9 +463,15 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                         const SizedBox(height: 32),
                         GradientButton(
                           text: 'Continue',
-                          onPressed: _isLoading ? null : _submitPhone, // Always active
+                          onPressed: _isLoading
+                              ? null
+                              : _submitPhone, // Always active
                           isLoading: _isLoading,
-                          icon: const Icon(Icons.arrow_forward_rounded, color: AppTheme.primaryColor, size: 18),
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            color: AppTheme.primaryColor,
+                            size: 18,
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -501,7 +526,8 @@ class _GlowingPhoneGraphicState extends State<_GlowingPhoneGraphic>
             children: [
               // Concentric Pulsing Ripples (3 stages)
               ...List.generate(3, (index) {
-                final double progress = (_controller.value + (index / 3.0)) % 1.0;
+                final double progress =
+                    (_controller.value + (index / 3.0)) % 1.0;
                 final double size = 60 + (progress * 90);
                 final double opacity = (1.0 - progress) * 0.22;
                 return Container(
@@ -534,7 +560,7 @@ class _GlowingPhoneGraphicState extends State<_GlowingPhoneGraphic>
                       color: Colors.black.withValues(alpha: 0.02),
                       blurRadius: 6,
                       offset: const Offset(0, 4),
-                    )
+                    ),
                   ],
                 ),
                 child: Center(

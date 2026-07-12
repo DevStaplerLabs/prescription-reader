@@ -425,8 +425,14 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
       }
     }
 
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + durationDays);
+    // A duration is inclusive. A five-day prescription should run on five
+    // calendar dates, not until the same time on a sixth date.
+    const scheduleStartDate = new Date(startDate);
+    scheduleStartDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(scheduleStartDate);
+    endDate.setDate(endDate.getDate() + Math.max(durationDays, 1) - 1);
+    endDate.setHours(23, 59, 59, 999);
 
     // Sanitize enum fields to only allow values accepted by the Schedule model
     const VALID_MEAL_INSTRUCTIONS = ['before', 'after', 'with'];
@@ -443,7 +449,7 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
       form: med.form,
       dosage: med.dosage,
       scheduledTimes,
-      startDate: new Date(startDate),
+      startDate: scheduleStartDate,
       endDate,
       mealInstruction,
       route,

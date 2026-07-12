@@ -4,6 +4,15 @@ import '../constants/app_constants.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
+class ApiException implements Exception {
+  final String message;
+
+  const ApiException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
@@ -88,11 +97,14 @@ class ApiService {
           };
         }
       }
-      throw Exception(
-        response.data?['message'] ?? 'Failed to parse prescription',
+      throw const ApiException(
+        'We could not read that prescription. Please try a clearer photo.',
       );
     } catch (e) {
-      throw Exception('API Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'We could not read that prescription. Please try again.',
+      );
     }
   }
 
@@ -104,12 +116,18 @@ class ApiService {
         data: confirmPayload,
       );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
+      if ((response.statusCode == 201 || response.statusCode == 200) &&
+          response.data?['status'] == 'success') {
         return true;
       }
-      return false;
+      throw const ApiException(
+        'Your schedule was not saved. Please try again.',
+      );
     } catch (e) {
-      throw Exception('API Confirm Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'Your schedule was not saved. Please try again.',
+      );
     }
   }
 
@@ -188,7 +206,10 @@ class ApiService {
       if (e is DioException && e.response?.statusCode == 404) {
         return []; // 404 is standard when there is no active schedule in the DB
       }
-      throw Exception('API Active Schedules Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'We could not load your medication schedule.',
+      );
     }
   }
 
@@ -201,9 +222,14 @@ class ApiService {
       if (response.statusCode == 200) {
         return true;
       }
-      return false;
+      throw const ApiException(
+        'Your active schedule could not be discontinued.',
+      );
     } catch (e) {
-      throw Exception('API Deactivate Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'Your active schedule could not be discontinued.',
+      );
     }
   }
 
@@ -227,7 +253,10 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      throw Exception('API History Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'We could not load your prescription history.',
+      );
     }
   }
 
@@ -241,9 +270,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return true;
       }
-      return false;
+      throw const ApiException('That schedule could not be restored.');
     } catch (e) {
-      throw Exception('API Restore Error: $e');
+      throw _friendlyError(e, fallback: 'That schedule could not be restored.');
     }
   }
 
@@ -267,13 +296,13 @@ class ApiService {
       );
 
       if (response.statusCode != 200 || response.data?['status'] != 'success') {
-        throw Exception(
-          response.data?['message'] ??
-              'Could not update this medication reminder.',
-        );
+        throw const ApiException('Could not update this medication reminder.');
       }
     } catch (e) {
-      throw Exception('API Reminder Update Error: $e');
+      throw _friendlyError(
+        e,
+        fallback: 'Could not update this medication reminder.',
+      );
     }
   }
 
@@ -282,6 +311,51 @@ class ApiService {
     final month = local.month.toString().padLeft(2, '0');
     final day = local.day.toString().padLeft(2, '0');
     return '${local.year}-$month-$day';
+  }
+
+  ApiException _friendlyError(Object error, {required String fallback}) {
+    if (error is ApiException) return error;
+    if (error is! DioException) return ApiException(fallback);
+
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return const ApiException(
+        'This is taking longer than expected. Please try again.',
+      );
+    }
+    if (error.type == DioExceptionType.connectionError) {
+      return const ApiException(
+        'We could not connect. Check your internet connection and try again.',
+      );
+    }
+
+    final statusCode = error.response?.statusCode;
+    final responseData = error.response?.data;
+    final serverMessage = responseData is Map<String, dynamic>
+        ? responseData['message']?.toString()
+        : null;
+    if (statusCode == 400 &&
+        serverMessage != null &&
+        serverMessage.isNotEmpty) {
+      return ApiException(serverMessage);
+    }
+    if (statusCode == 404) {
+      return const ApiException(
+        'We could not find that schedule. Refresh and try again.',
+      );
+    }
+    if (statusCode == 429) {
+      return const ApiException(
+        'Too many requests. Please wait a moment and try again.',
+      );
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return const ApiException(
+        'Something went wrong on our side. Please try again shortly.',
+      );
+    }
+    return ApiException(fallback);
   }
 
   // Log adherence in memory for mock simulation

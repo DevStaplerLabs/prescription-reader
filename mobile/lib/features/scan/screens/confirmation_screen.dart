@@ -14,12 +14,17 @@ class MedicationForm {
   final TextEditingController duration;
   final TextEditingController instruction;
 
-  MedicationForm({String drug = '', String dos = '', String freq = '', String dur = '', String inst = ''})
-      : drugName = TextEditingController(text: drug),
-        dosage = TextEditingController(text: dos),
-        frequency = TextEditingController(text: freq),
-        duration = TextEditingController(text: dur),
-        instruction = TextEditingController(text: inst);
+  MedicationForm({
+    String drug = '',
+    String dos = '',
+    String freq = '',
+    String dur = '',
+    String inst = '',
+  }) : drugName = TextEditingController(text: drug),
+       dosage = TextEditingController(text: dos),
+       frequency = TextEditingController(text: freq),
+       duration = TextEditingController(text: dur),
+       instruction = TextEditingController(text: inst);
 
   void dispose() {
     drugName.dispose();
@@ -51,24 +56,29 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
     final medicines = widget.ocrData['extractedMedicines'] as List<dynamic>?;
     if (medicines != null && medicines.isNotEmpty) {
       for (var med in medicines) {
-        _forms.add(MedicationForm(
-          drug: med['drugName']?.toString() ?? '',
-          dos: med['dosage']?.toString() ?? '',
-          freq: med['frequency']?.toString() ?? '',
-          dur: med['durationDays']?.toString() ?? '',
-          inst: med['instruction']?.toString() ?? '',
-        ));
+        _forms.add(
+          MedicationForm(
+            drug: med['drugName']?.toString() ?? '',
+            dos: med['dosage']?.toString() ?? '',
+            freq: med['frequency']?.toString() ?? '',
+            dur: med['durationDays']?.toString() ?? '',
+            inst: med['instruction']?.toString() ?? '',
+          ),
+        );
         _isEditing.add(false); // Default to read-only view matching mockup
       }
     } else {
-      final data = widget.ocrData['extractedData'] as Map<String, dynamic>? ?? {};
-      _forms.add(MedicationForm(
-        drug: data['drugName']?.toString() ?? '',
-        dos: data['dosage']?.toString() ?? '',
-        freq: data['frequency']?.toString() ?? '',
-        dur: data['durationDays']?.toString() ?? '',
-        inst: data['instruction']?.toString() ?? '',
-      ));
+      final data =
+          widget.ocrData['extractedData'] as Map<String, dynamic>? ?? {};
+      _forms.add(
+        MedicationForm(
+          drug: data['drugName']?.toString() ?? '',
+          dos: data['dosage']?.toString() ?? '',
+          freq: data['frequency']?.toString() ?? '',
+          dur: data['durationDays']?.toString() ?? '',
+          inst: data['instruction']?.toString() ?? '',
+        ),
+      );
       _isEditing.add(false);
     }
   }
@@ -83,20 +93,16 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
 
   Future<void> _saveSchedule() async {
     setState(() => _isSaving = true);
-    
+
     try {
       final apiService = ref.read(apiServiceProvider);
-      
+
       // Build the medications list from the form values
       final List<Map<String, dynamic>> medications = _forms.map((form) {
         // Parse frequency (e.g. "1-0-1" or "1-1-1")
         final freqText = form.frequency.text.trim();
         final freqParts = freqText.split('-');
-        final frequencyMap = {
-          'morning': 0,
-          'afternoon': 0,
-          'night': 0,
-        };
+        final frequencyMap = {'morning': 0, 'afternoon': 0, 'night': 0};
         if (freqParts.length == 3) {
           frequencyMap['morning'] = int.tryParse(freqParts[0]) ?? 0;
           frequencyMap['afternoon'] = int.tryParse(freqParts[1]) ?? 0;
@@ -128,10 +134,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
           'form': 'Tab', // default form for now
           'dosage': form.dosage.text,
           'frequency': frequencyMap,
-          'duration': {
-            'value': durationValue,
-            'unit': 'days',
-          },
+          'duration': {'value': durationValue, 'unit': 'days'},
           'mealInstruction': mealInstruction,
           'route': 'oral',
           'specialInstructions': null,
@@ -139,15 +142,21 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       }).toList();
 
       // Original parsedData contains clinic/doctor/patient fields
-      final originalParsedData = widget.ocrData['parsedData'] as Map<String, dynamic>? ?? {};
+      final originalParsedData =
+          widget.ocrData['parsedData'] as Map<String, dynamic>? ?? {};
 
       // Merge user edits back into the parsedData
-      final Map<String, dynamic> mergedParsedData = Map.from(originalParsedData);
+      final Map<String, dynamic> mergedParsedData = Map.from(
+        originalParsedData,
+      );
       mergedParsedData['medications'] = medications;
 
-      // Fetch the registered phone number from StorageService
+      // Use the registered profile for delivery details. OCR can identify a
+      // different or incomplete patient name, whereas this is the name the
+      // user explicitly chose for reminders.
       final storage = ref.read(storageServiceProvider);
       final rawPhone = await storage.read('phone_number') as String?;
+      final registeredName = await storage.read('user_name') as String?;
       String? phone = rawPhone;
       if (phone != null && phone.isNotEmpty) {
         phone = phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -158,26 +167,39 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       }
 
       // Inject the phone number into the patient details
-      final Map<String, dynamic> patientData = Map.from(mergedParsedData['patient'] as Map<String, dynamic>? ?? {});
+      final Map<String, dynamic> patientData = Map.from(
+        mergedParsedData['patient'] as Map<String, dynamic>? ?? {},
+      );
       patientData['phone'] = phone;
+      if (registeredName != null && registeredName.trim().isNotEmpty) {
+        patientData['name'] = registeredName.trim();
+      }
       mergedParsedData['patient'] = patientData;
 
       final confirmPayload = {
         'rawOcrText': widget.ocrData['rawOcrText'] ?? '',
         'parsedData': mergedParsedData,
       };
-      
-      await apiService.confirmPrescription(confirmPayload);
-      
+
+      final saved = await apiService.confirmPrescription(confirmPayload);
+      if (!saved) {
+        throw Exception('Your schedule could not be saved. Please try again.');
+      }
+
       ref.invalidate(schedulesProvider);
-      
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Schedule Saved! 🎉', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          content: Text(
+            'Schedule Saved! 🎉',
+            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+          ),
           backgroundColor: AppTheme.successColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -190,10 +212,15 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save: $e', style: GoogleFonts.plusJakartaSans(color: Colors.white)),
+          content: Text(
+            'Failed to save: $e',
+            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+          ),
           backgroundColor: AppTheme.dangerColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
@@ -236,7 +263,12 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
           // Yellow Header Bar matching StaplerLabs theme
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(top: 54, bottom: 20, left: 20, right: 20),
+            padding: const EdgeInsets.only(
+              top: 54,
+              bottom: 20,
+              left: 20,
+              right: 20,
+            ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppTheme.accentColor, Color(0xFFE5B600)],
@@ -278,11 +310,14 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
               ],
             ),
           ),
-          
+
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 20.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -330,11 +365,11 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                           ),
                         ),
                         isExpanded: _showRawText,
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Mockup section header
                   Text(
                     'EXTRACTED MEDICINES',
@@ -346,7 +381,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Dynamic list of cards
                   ListView.builder(
                     shrinkWrap: true,
@@ -364,29 +399,35 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade200, width: 1.2),
+                          border: Border.all(
+                            color: Colors.grey.shade200,
+                            width: 1.2,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.02),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
-                            )
+                            ),
                           ],
                         ),
-                        child: isEditing 
-                            ? _buildEditCard(index, form) 
+                        child: isEditing
+                            ? _buildEditCard(index, form)
                             : _buildPreviewCard(index, form, dotColor),
                       );
                     },
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Outlined Add Medication Button
                   OutlinedButton(
                     onPressed: _addMedication,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryColor,
-                      side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                      side: const BorderSide(
+                        color: AppTheme.primaryColor,
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -395,7 +436,11 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.add_rounded, color: AppTheme.primaryColor, size: 20),
+                        const Icon(
+                          Icons.add_rounded,
+                          color: AppTheme.primaryColor,
+                          size: 20,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'Add Medication',
@@ -434,7 +479,9 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                       height: 24,
                       width: 24,
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.primaryColor,
+                        ),
                         strokeWidth: 2.5,
                       ),
                     )
@@ -473,13 +520,10 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
         ),
         const SizedBox(width: 16),
-        
+
         // Drug name and detail subtitles
         Expanded(
           child: Column(
@@ -507,7 +551,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             ],
           ),
         ),
-        
+
         // Circular Pencil Edit Button
         InkWell(
           onTap: () {
@@ -554,7 +598,11 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.check_circle_outline_rounded, color: AppTheme.primaryColor, size: 22),
+                  icon: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: AppTheme.primaryColor,
+                    size: 22,
+                  ),
                   onPressed: () {
                     setState(() {
                       _isEditing[index] = false;
@@ -562,7 +610,11 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.dangerColor, size: 22),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppTheme.dangerColor,
+                    size: 22,
+                  ),
                   onPressed: () => _removeMedication(index),
                 ),
               ],
@@ -572,7 +624,10 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
         const SizedBox(height: 10),
         TextField(
           controller: form.drugName,
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1E293B),
+          ),
           decoration: const InputDecoration(
             labelText: 'Drug Name',
             hintText: 'e.g. Paracetamol',
@@ -585,11 +640,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             Expanded(
               child: TextField(
                 controller: form.dosage,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Dosage',
                   hintText: 'e.g. 500mg',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -597,11 +658,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             Expanded(
               child: TextField(
                 controller: form.frequency,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Frequency',
                   hintText: 'e.g. 3×/day',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
@@ -613,11 +680,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             Expanded(
               child: TextField(
                 controller: form.duration,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Duration (Days)',
                   hintText: 'e.g. 5',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -626,11 +699,17 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             Expanded(
               child: TextField(
                 controller: form.instruction,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1E293B),
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Instruction',
                   hintText: 'e.g. After food',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
