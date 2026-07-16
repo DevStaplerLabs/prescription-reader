@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/gradient_button.dart';
 
@@ -107,16 +108,40 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
 
     setState(() => _isLoading = true);
 
-    // Save to storage
-    final storage = ref.read(storageServiceProvider);
-    await storage.save('phone_number', phone);
-    await storage.save('user_name', name);
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.registerPatient(name, phone);
 
-    // Small delay for UX
-    await Future.delayed(const Duration(milliseconds: 800));
+      // Save to storage
+      final storage = ref.read(storageServiceProvider);
+      await storage.save('phone_number', phone);
+      await storage.save('user_name', name);
 
-    if (!mounted) return;
-    context.go('/'); // Proceed to home
+      // Small delay for UX
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      if (!mounted) return;
+      context.go('/'); // Proceed to home
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Onboarding failed: $e',
+            style: GoogleFonts.plusJakartaSans(color: Colors.white),
+          ),
+          backgroundColor: AppTheme.dangerColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override

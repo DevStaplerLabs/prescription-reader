@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Schedule from '../models/Schedule.js';
+import Patient from '../models/Patient.js';
 
 const router = express.Router();
 
@@ -14,7 +15,16 @@ router.get('/active', async (req, res, next) => {
     const { patientPhone } = req.query;
     const query = { isActive: true };
     if (patientPhone) {
-      query.patientPhone = patientPhone;
+      let cleanPhone = patientPhone.replace(/[^0-9]/g, '');
+      if (cleanPhone.length === 10) {
+        cleanPhone = '91' + cleanPhone;
+      }
+      const patient = await Patient.findOne({ phone: cleanPhone });
+      if (patient) {
+        query.patientId = patient._id;
+      } else {
+        query.patientPhone = patientPhone;
+      }
     }
 
     const activeSchedule = await Schedule.findOne(query)
@@ -145,9 +155,24 @@ router.get('/history', async (req, res, next) => {
         message: 'patientPhone query parameter is required.',
       });
     }
-    const history = await Schedule.find({ patientPhone, isActive: false })
+
+    let cleanPhone = patientPhone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const query = { isActive: false };
+    const patient = await Patient.findOne({ phone: cleanPhone });
+    if (patient) {
+      query.patientId = patient._id;
+    } else {
+      query.patientPhone = patientPhone;
+    }
+
+    const history = await Schedule.find(query)
       .populate('prescriptionId')
       .sort({ createdAt: -1 });
+
     return res.status(200).json({
       status: 'success',
       data: { history },
@@ -168,16 +193,35 @@ router.post('/:id/restore', async (req, res, next) => {
     });
   }
 
+  let cleanPhone = patientPhone.replace(/[^0-9]/g, '');
+  if (cleanPhone.length === 10) {
+    cleanPhone = '91' + cleanPhone;
+  }
+
+  const patient = await Patient.findOne({ phone: cleanPhone });
+  const patientId = patient ? patient._id : null;
+
+  const updateQuery = { isActive: true };
+  const restoreQuery = { _id: id };
+
+  if (patientId) {
+    updateQuery.patientId = patientId;
+    restoreQuery.patientId = patientId;
+  } else {
+    updateQuery.patientPhone = patientPhone;
+    restoreQuery.patientPhone = patientPhone;
+  }
+
   // Attempt using transactions if supported (will fail on standalone local DBs)
   let session;
   try {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    await Schedule.updateMany({ patientPhone, isActive: true }, { isActive: false }).session(session);
+    await Schedule.updateMany(updateQuery, { isActive: false }).session(session);
 
     const restored = await Schedule.findOneAndUpdate(
-      { _id: id, patientPhone },
+      restoreQuery,
       { isActive: true },
       { new: true }
     ).populate('prescriptionId').session(session);
@@ -207,9 +251,9 @@ router.post('/:id/restore', async (req, res, next) => {
 
     // Fallback: non-transactional atomic sequence (for local testing on standalone DBs)
     try {
-      await Schedule.updateMany({ patientPhone, isActive: true }, { isActive: false });
+      await Schedule.updateMany(updateQuery, { isActive: false });
       const restored = await Schedule.findOneAndUpdate(
-        { _id: id, patientPhone },
+        restoreQuery,
         { isActive: true },
         { new: true }
       ).populate('prescriptionId');

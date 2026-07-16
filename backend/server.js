@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import prescriptionRouter from './src/routes/prescription.js';
 import scheduleRouter from './src/routes/schedule.js';
+import patientRouter from './src/routes/patient.js';
 import { initReminderJob } from './src/jobs/reminderJob.js';
 
 // Load environment variables
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/prescriptions', prescriptionRouter);
 app.use('/api/schedules', scheduleRouter);
+app.use('/api/patients', patientRouter);
 
 // Basic Health Check Route
 app.get('/', (req, res) => {

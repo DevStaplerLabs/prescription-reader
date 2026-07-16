@@ -257,13 +257,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               grouped[time]!.add(s);
             }
 
+            final firstItem = schedules.isNotEmpty ? schedules.first : null;
+
             return CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
               slivers: [
                 // Glowing Gradient Header Sliver
-                SliverToBoxAdapter(child: _buildHeader(context)),
+                SliverToBoxAdapter(child: _buildHeader(context, firstItem)),
 
                 // Welcome Greeting and Today Date Section
                 SliverToBoxAdapter(
@@ -602,7 +604,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, Map<String, dynamic>? activeSchedule) {
+    String appointmentText = "No upcoming follow-ups scheduled";
+    final followUpStr = activeSchedule?['followUp']?.toString();
+    final doctorName = activeSchedule?['doctorName']?.toString();
+    
+    if (followUpStr != null && followUpStr.trim().isNotEmpty) {
+      final parsedDate = DateTime.tryParse(followUpStr)?.toLocal();
+      if (parsedDate != null) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final dateFormatted = '${months[parsedDate.month - 1]} ${parsedDate.day}, ${parsedDate.year}';
+        appointmentText = "Next appointment: $dateFormatted";
+        if (doctorName != null && doctorName.trim().isNotEmpty) {
+          appointmentText += " — Dr. $doctorName";
+        }
+      }
+    }
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -710,7 +728,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
-                    "Next appointment: Jul 3, 2026 — Dr. Sharma",
+                    appointmentText,
                     style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,

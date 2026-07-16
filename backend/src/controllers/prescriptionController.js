@@ -2,6 +2,7 @@ import { extractTextFromImage } from '../services/visionService.js';
 import { parsePrescriptionImage, generateScheduleFromParsed } from '../services/nlpService.js';
 import Prescription from '../models/Prescription.js';
 import Schedule from '../models/Schedule.js';
+import Patient from '../models/Patient.js';
 
 /**
  * Uploads prescription image and returns raw OCR text
@@ -92,8 +93,23 @@ export const confirmPrescription = async (req, res, next) => {
       });
     }
 
+    // Resolve patientId relationship using the phone number
+    let patientId = null;
+    const patientPhone = parsedData.patient?.phone;
+    if (patientPhone) {
+      let cleanPhone = patientPhone.replace(/[^0-9]/g, '');
+      if (cleanPhone.length === 10) {
+        cleanPhone = '91' + cleanPhone;
+      }
+      const patient = await Patient.findOne({ phone: cleanPhone });
+      if (patient) {
+        patientId = patient._id;
+      }
+    }
+
     // Save the prescription record
     const prescription = new Prescription({
+      patientId: patientId,
       rawOcrText: rawOcrText || '',
       extractedData: {
         clinicName: parsedData.clinicName || null,
@@ -113,13 +129,20 @@ export const confirmPrescription = async (req, res, next) => {
     // Generate the schedule from the parsed data
     const scheduleData = generateScheduleFromParsed(parsedData);
 
-    // Deactivate any existing active schedules
-    await Schedule.updateMany({ isActive: true }, { isActive: false });
+    // Deactivate existing active schedules for this patient only
+    const deactivateQuery = { isActive: true };
+    if (patientId) {
+      deactivateQuery.patientId = patientId;
+    } else if (patientPhone) {
+      deactivateQuery.patientPhone = patientPhone;
+    }
+    await Schedule.updateMany(deactivateQuery, { isActive: false });
 
     // Create the new schedule
     const schedule = new Schedule({
       prescriptionId: prescription._id,
-      patientPhone: parsedData.patient?.phone || null,
+      patientId: patientId,
+      patientPhone: patientPhone || null,
       medications: scheduleData.medications,
       advice: scheduleData.advice,
       followUp: scheduleData.followUp,

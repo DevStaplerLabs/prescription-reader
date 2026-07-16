@@ -65,15 +65,14 @@ export const checkAndSendReminders = async () => {
           const dosage = med.dosage || (med.form ? `1 ${med.form}` : '1 dose');
           console.log(`[Reminder Job] Dispatching reminder to ${patientName} (${patientPhone}) for ${med.drugName} (${dosage})`);
 
-          // For Phase 1, we send the "hello_world" test template.
-          // Note: In sandbox, this defaults to static text, but we pass full variables to keep it scalable.
+          // For Phase 1, we send the template-based WhatsApp message.
           await sendMedicationReminder(
             patientPhone,
             patientName,
             med.drugName,
             dosage,
             currentTimeStr,
-            'medication_reminder'
+            'medication_reminder_v2'
           );
         } catch (err) {
           console.error(`[Reminder Job] Failed to send reminder for ${med.drugName} to ${patientPhone}:`, err.message);

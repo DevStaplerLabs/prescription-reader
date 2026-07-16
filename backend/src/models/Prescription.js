@@ -39,6 +39,11 @@ const patientSchema = new mongoose.Schema({
 
 const prescriptionSchema = new mongoose.Schema(
   {
+    patientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Patient',
+      default: null,
+    },
     rawOcrText: { type: String, default: '' },
     extractedData: {
       clinicName: { type: String, default: null },

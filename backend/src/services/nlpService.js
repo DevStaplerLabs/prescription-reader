@@ -9,7 +9,8 @@ const PRESCRIPTION_PARSE_PROMPT = `You are an expert medical prescription parser
 
 Analyze this prescription image and extract ALL information into the following JSON structure.
 
-IMPORTANT CONVENTIONS:
+IMPORTANT CONVENTIONS & FREQUENCIES:
+- Numeric frequency formats like "X-Y-Z" mean: X dose morning, Y dose afternoon, Z dose night. Generally, for any hyphenated representation X-Y-Z, map to morning: X, afternoon: Y, night: Z.
 - "1-0-1" means: 1 dose morning, 0 dose afternoon, 1 dose night
 - "1-1-1" means: 1 dose morning, 1 dose afternoon, 1 dose night
 - "1-0-0" means: 1 dose morning only
@@ -21,21 +22,33 @@ IMPORTANT CONVENTIONS:
 - "Tab" = Tablet, "Cap" = Capsule, "Syp" = Syrup, "Inj" = Injection
 - "x 5 days" or "x5days" or "x 5" means duration of 5 days
 - "x 1 week" means duration of 7 days
-- "BD" = twice daily (morning and night, same as 1-0-1)
-- "TDS" = three times daily (same as 1-1-1)
-- "OD" = once daily (same as 1-0-0)
-- "SOS" = as needed
+- "BD" or "B.D." = twice daily (morning and night, same as 1-0-1)
+- "TDS" or "T.D.S." = three times daily (same as 1-1-1)
+- "OD" or "O.D." = once daily (same as 1-0-0)
 - "Rx" marks the start of the prescription section
 - "Adv" or "Advice" marks the advisory section (non-medication instructions)
 - Braces "{" or brackets grouping medications with "after meals" or "before meals" mean that meal instruction applies to ALL medications within that group
 
 INSTRUCTIONS:
 1. Correct obvious OCR/handwriting spelling errors in drug names (e.g., "Augmentin" not "Augmeutin")
-2. If a dosage (like mg) is not written for a drug, set dosage to null
-3. Parse the date into ISO format (YYYY-MM-DD). For ambiguous dates like "12/10/22", assume DD/MM/YY format (Indian convention)
-4. If doctor name is not clearly written, set to null
-5. For "Adv:" or advice items, these are NOT medications — list them separately in the advice array
-6. If you see advice items with a frequency (like "1-0-1 x 1 week"), include the full instruction as a single advice string
+2. If a dosage (like mg) is not written for a drug, set dosage to null.
+3. Parse the date into ISO format (YYYY-MM-DD). For ambiguous dates like "12/10/22", assume DD/MM/YY format (Indian convention).
+4. If doctor name is not clearly written, set to null.
+5. For "Adv:" or advice items, these are NOT medications — list them separately in the advice array.
+6. If you see advice items with a frequency (like "1-0-1 x 1 week"), include the full instruction as a single advice string.
+7. **Meal Instruction Mapping**:
+   - PC / p.c. / "after meals" / "post-meal" -> "after"
+   - AC / a.c. / "before meals" / "pre-meal" / "BBF" / "empty stomach" -> "before"
+   - "with meals" / "during food" -> "with"
+   - HS / h.s. / "at bedtime" / "bedtime" -> set frequency "night" to 1 (if not already set), mealInstruction to null, and put "At bedtime" in specialInstructions.
+8. **SOS / As Needed Frequencies**:
+   - For "SOS" or "PRN" or "when needed" medications, set morning: 0, afternoon: 0, night: 0, and put "SOS" or "As needed" in specialInstructions.
+9. **Complex Frequencies**:
+   - For alternate days, weekly, or monthly frequencies, set morning: 0, afternoon: 0, night: 0, and describe the frequency in specialInstructions (e.g., "Alternate days" or "Once weekly").
+10. **Strict Form Short Codes**:
+    - Always map medication form to one of the exact short codes: 'Tab' (for Tablet/Tab), 'Cap' (for Capsule/Cap), 'Syp' (for Syrup/Syp/Suspension), 'Inj' (for Injection/Inj), 'Drops', 'Gel', 'Cream', 'Ointment', or null.
+11. **JSON Output Constraint**:
+    - Return ONLY a raw JSON string starting with '{' and ending with '}'. Do not wrap the JSON output in markdown formatting (like \`\`\`json ... \`\`\`), do not output any introductory or concluding text, and do not append any commentary.
 
 Return this exact JSON structure:
 {

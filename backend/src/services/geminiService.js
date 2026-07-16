@@ -14,6 +14,21 @@ const getClient = () => {
 };
 
 /**
+ * Cleans a string to extract only the valid JSON substring.
+ * Removes leading/trailing markdown characters (like ```json ... ```) or explanations.
+ * @param {string} text - The raw string from Gemini response
+ * @returns {string} Cleaned JSON string
+ */
+const cleanJSONString = (text) => {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    return text.substring(start, end + 1);
+  }
+  return text.trim();
+};
+
+/**
  * Sends an image to Gemini 3.5 Flash for structured extraction.
  * @param {string} prompt - The system/user prompt describing what to extract
  * @param {Buffer} imageBuffer - The image buffer to analyze
@@ -46,8 +61,9 @@ export const parseImageWithGemini = async (prompt, imageBuffer, mimeType = 'imag
       const response = result.response;
       const text = response.text();
 
-      // Parse the JSON response
-      const parsed = JSON.parse(text);
+      // Parse the cleaned JSON response
+      const cleaned = cleanJSONString(text);
+      const parsed = JSON.parse(cleaned);
       return parsed;
     } catch (error) {
       lastError = error;
@@ -83,7 +99,8 @@ export const parseTextWithGemini = async (prompt, ocrText) => {
     ]);
     const response = result.response;
     const text = response.text();
-    return JSON.parse(text);
+    const cleaned = cleanJSONString(text);
+    return JSON.parse(cleaned);
   } catch (error) {
     console.error('Gemini text parsing failed:', error.message);
     throw new Error(`Gemini text parsing failed: ${error.message}`);

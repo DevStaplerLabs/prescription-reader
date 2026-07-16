@@ -74,9 +74,9 @@ export const sendWhatsAppTemplate = async (to, templateName, components = [], la
  * @param {string} drugName - Name of the medication.
  * @param {string} dosage - Dosage details (e.g. "1 tablet", "5ml").
  * @param {string} scheduledTime - Time of the scheduled dose (e.g. "08:00 AM").
- * @param {string} [templateName="medication_reminder"] - Template name.
+ * @param {string} [templateName="medication_reminder_v2"] - Template name.
  */
-export const sendMedicationReminder = async (to, patientName, drugName, dosage, scheduledTime, templateName = 'medication_reminder') => {
+export const sendMedicationReminder = async (to, patientName, drugName, dosage, scheduledTime, templateName = 'medication_reminder_v2') => {
   // If we are using the default "hello_world" template, it does not support variables/components.
   // For custom templates, we configure components. E.g. body parameters:
   let components = [];
@@ -97,3 +97,28 @@ export const sendMedicationReminder = async (to, patientName, drugName, dosage, 
 
   return sendWhatsAppTemplate(to, templateName, components);
 };
+
+/**
+ * Sends a welcome/onboarding message to a new user.
+ * 
+ * @param {string} to - Recipient's phone number.
+ * @param {string} patientName - Name of the patient.
+ * @param {string} [templateName="hello_world"] - Template name.
+ */
+export const sendOnboardingMessage = async (to, patientName, templateName = 'hello_world') => {
+  let components = [];
+  
+  if (templateName !== 'hello_world') {
+    components = [
+      {
+        type: 'body',
+        parameters: [
+          { type: 'text', text: patientName }
+        ]
+      }
+    ];
+  }
+
+  return sendWhatsAppTemplate(to, templateName, components);
+};
+

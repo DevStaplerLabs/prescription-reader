@@ -24,6 +24,29 @@ class ApiService {
   // In-memory store for dose adherence statuses (e.g. 'taken', 'missed', 'snoozed')
   final Map<String, String> _adherenceStore = {};
 
+  // Register patient on onboarding
+  Future<bool> registerPatient(String name, String phone) async {
+    try {
+      final response = await _dio.post(
+        '${AppConstants.baseUrl}/patients/onboard',
+        data: {
+          'name': name,
+          'phone': phone,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data?['status'] == 'success') {
+        return true;
+      }
+      throw const ApiException('Patient onboarding failed on server.');
+    } catch (e) {
+      throw _friendlyError(
+        e,
+        fallback: 'Could not complete onboarding. Please try again.',
+      );
+    }
+  }
+
   // Upload image and return parsed OCR text along with structured data
   Future<Map<String, dynamic>> uploadPrescription(String filePath) async {
     try {
@@ -155,6 +178,12 @@ class ApiService {
           final medications = schedule['medications'] as List<dynamic>? ?? [];
           final flatList = <Map<String, dynamic>>[];
 
+          final followUp = schedule['followUp']?.toString();
+          final prescription = schedule['prescriptionId'] as Map<String, dynamic>?;
+          final extData = prescription?['extractedData'] as Map<String, dynamic>?;
+          final doctorName = extData?['doctorName']?.toString();
+          final clinicName = extData?['clinicName']?.toString();
+
           for (var med in medications) {
             final drugName = med['drugName']?.toString() ?? 'Unknown';
             final dosage = med['dosage']?.toString() ?? '';
@@ -194,6 +223,9 @@ class ApiService {
                 'endDate': med['endDate']?.toString(),
                 'instruction': mealInst,
                 'status': status,
+                'followUp': followUp,
+                'doctorName': doctorName,
+                'clinicName': clinicName,
               });
             }
           }
