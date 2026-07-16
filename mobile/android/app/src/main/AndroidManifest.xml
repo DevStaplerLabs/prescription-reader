@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for the app to call the hosted Prescription Reader API. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="prescription_reader"
         android:name="${applicationName}"
