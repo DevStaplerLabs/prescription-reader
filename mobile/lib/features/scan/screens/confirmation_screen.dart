@@ -13,6 +13,8 @@ class MedicationForm {
   final TextEditingController frequency;
   final TextEditingController duration;
   final TextEditingController instruction;
+  bool reminderEnabled;
+  List<String> reminderTimes;
 
   MedicationForm({
     String drug = '',
@@ -20,7 +22,11 @@ class MedicationForm {
     String freq = '',
     String dur = '',
     String inst = '',
-  }) : drugName = TextEditingController(text: drug),
+    bool remindersOn = true,
+    List<String>? times,
+  }) : reminderEnabled = remindersOn,
+       reminderTimes = List<String>.from(times ?? const <String>[]),
+       drugName = TextEditingController(text: drug),
        dosage = TextEditingController(text: dos),
        frequency = TextEditingController(text: freq),
        duration = TextEditingController(text: dur),
@@ -63,6 +69,9 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             freq: med['frequency']?.toString() ?? '',
             dur: med['durationDays']?.toString() ?? '',
             inst: med['instruction']?.toString() ?? '',
+            times: _defaultReminderTimes(
+              med['frequency']?.toString() ?? '',
+            ),
           ),
         );
         _isEditing.add(false); // Default to read-only view matching mockup
@@ -77,10 +86,34 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
           freq: data['frequency']?.toString() ?? '',
           dur: data['durationDays']?.toString() ?? '',
           inst: data['instruction']?.toString() ?? '',
+          times: _defaultReminderTimesFromFrequency(data['frequency']),
         ),
       );
       _isEditing.add(false);
     }
+  }
+
+  static List<String> _defaultReminderTimes(String frequency) {
+    final parts = frequency.split('-');
+    if (parts.length != 3) return const ['08:00'];
+    const slots = ['08:00', '14:00', '21:00'];
+    return [
+      for (var index = 0; index < parts.length; index++)
+        if ((int.tryParse(parts[index].trim()) ?? 0) > 0) slots[index],
+    ];
+  }
+
+  static List<String> _defaultReminderTimesFromFrequency(dynamic frequency) {
+    if (frequency is! Map) return const ['08:00'];
+    const slots = <String, String>{
+      'morning': '08:00',
+      'afternoon': '14:00',
+      'night': '21:00',
+    };
+    return [
+      for (final entry in slots.entries)
+        if ((frequency[entry.key] as num? ?? 0) > 0) entry.value,
+    ];
   }
 
   @override
@@ -92,6 +125,18 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
   }
 
   Future<void> _saveSchedule() async {
+    final missingReminderTime = _forms.any(
+      (form) => form.reminderEnabled && form.reminderTimes.isEmpty,
+    );
+    if (missingReminderTime) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add a reminder time or turn off reminders.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     setState(() => _isSaving = true);
 
     try {
@@ -138,6 +183,8 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
           'mealInstruction': mealInstruction,
           'route': 'oral',
           'specialInstructions': null,
+          'reminderEnabled': form.reminderEnabled,
+          'scheduledTimes': form.reminderTimes,
         };
       }).toList();
 
@@ -230,7 +277,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
 
   void _addMedication() {
     setState(() {
-      _forms.add(MedicationForm());
+      _forms.add(MedicationForm(times: const ['08:00']));
       _isEditing.add(true); // new items open in edit mode
     });
   }
@@ -250,6 +297,30 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       AppTheme.dangerColor,
     ];
     return colors[index % colors.length];
+  }
+
+  String _displayTime(String value) {
+    final parts = value.split(':');
+    final hour = int.tryParse(parts.first) ?? 0;
+    final minute = parts.length > 1 ? parts[1] : '00';
+    final suffix = hour >= 12 ? 'PM' : 'AM';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+    return '$hour12:$minute $suffix';
+  }
+
+  Future<void> _addReminderTime(MedicationForm form) async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 8, minute: 0),
+      helpText: 'Choose reminder time',
+    );
+    if (selected == null || !mounted) return;
+    final value =
+        '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
+    if (form.reminderTimes.contains(value)) return;
+    setState(() {
+      form.reminderTimes = [...form.reminderTimes, value]..sort();
+    });
   }
 
   @override
@@ -514,68 +585,120 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       if (form.instruction.text.isNotEmpty) form.instruction.text,
     ].join(' • ');
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Colored Status Dot
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 16),
-
-        // Drug name and detail subtitles
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${form.drugName.text} ${form.dosage.text}',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1E293B),
+        Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${form.drugName.text} ${form.dosage.text}',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1E293B),
+                    ),
+                  ),
+                  if (details.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      details,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _isEditing[index] = true),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 16,
                 ),
               ),
-              if (details.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  details,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: Colors.grey.shade500,
-                    fontWeight: FontWeight.w500,
+            ),
+          ],
+        ),
+        const Divider(height: 28),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Medication reminders',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            form.reminderEnabled ? 'Set the times below' : 'No reminders will be sent',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          value: form.reminderEnabled,
+          activeTrackColor: AppTheme.accentColor,
+          activeThumbColor: AppTheme.primaryColor,
+          onChanged: (value) => setState(() {
+            form.reminderEnabled = value;
+            if (value && form.reminderTimes.isEmpty) {
+              form.reminderTimes = const ['08:00'];
+            }
+          }),
+        ),
+        if (form.reminderEnabled) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Reminder times',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...form.reminderTimes.map(
+                (time) => InputChip(
+                  label: Text(_displayTime(time)),
+                  onDeleted: () => setState(() => form.reminderTimes.remove(time)),
+                  deleteIcon: const Icon(Icons.close_rounded, size: 18),
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.07),
+                  side: BorderSide(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.14),
                   ),
                 ),
-              ],
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.add_rounded, size: 18),
+                label: Text('Add time', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                onPressed: () => _addReminderTime(form),
+              ),
             ],
           ),
-        ),
-
-        // Circular Pencil Edit Button
-        InkWell(
-          onTap: () {
-            setState(() {
-              _isEditing[index] = true;
-            });
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.edit_rounded,
-                color: AppTheme.primaryColor,
-                size: 16,
-              ),
-            ),
-          ),
-        ),
+        ],
       ],
     );
   }

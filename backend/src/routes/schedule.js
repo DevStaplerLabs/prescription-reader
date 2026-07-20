@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Schedule from '../models/Schedule.js';
 import Patient from '../models/Patient.js';
+import { getIstDayBounds, parseIstDate } from '../utils/istDate.js';
 
 const router = express.Router();
 
@@ -98,10 +99,15 @@ router.patch('/:id/medications/:medicationId', async (req, res, next) => {
       }
     }
 
-    const parsedStartDate = hasOwn(req.body, 'startDate') ? new Date(startDate) : null;
-    const parsedEndDate = hasOwn(req.body, 'endDate') ? new Date(endDate) : null;
-    if ((parsedStartDate && Number.isNaN(parsedStartDate.getTime())) ||
-        (parsedEndDate && Number.isNaN(parsedEndDate.getTime()))) {
+    const parsedStartDate = hasOwn(req.body, 'startDate') ? parseIstDate(startDate) : null;
+    const endDateStart = hasOwn(req.body, 'endDate') ? parseIstDate(endDate) : null;
+    const parsedEndDate = endDateStart ? getIstDayBounds(endDateStart)?.end : null;
+    if (
+      (hasOwn(req.body, 'startDate') &&
+        Number.isNaN(parsedStartDate?.getTime())) ||
+      (hasOwn(req.body, 'endDate') &&
+        (!parsedEndDate || Number.isNaN(parsedEndDate.getTime())))
+    ) {
       return res.status(400).json({
         status: 'error',
         message: 'startDate and endDate must be valid dates.',

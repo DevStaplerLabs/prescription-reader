@@ -71,29 +71,34 @@ export const sendWhatsAppTemplate = async (to, templateName, components = [], la
  * 
  * @param {string} to - Recipient's phone number.
  * @param {string} patientName - Name of the patient.
- * @param {string} drugName - Name of the medication.
- * @param {string} dosage - Dosage details (e.g. "1 tablet", "5ml").
  * @param {string} scheduledTime - Time of the scheduled dose (e.g. "08:00 AM").
- * @param {string} [templateName="medication_reminder_v2"] - Template name.
+ * @param {Array<{drugName: string, dosage?: string, form?: string}>} medications - Medicines due at this time.
+ * @param {string} [templateName="medication_reminder_v3"] - Template name.
  */
-export const sendMedicationReminder = async (to, patientName, drugName, dosage, scheduledTime, templateName = 'medication_reminder_v2') => {
-  // If we are using the default "hello_world" template, it does not support variables/components.
-  // For custom templates, we configure components. E.g. body parameters:
-  let components = [];
-  
-  if (templateName !== 'hello_world') {
-    components = [
-      {
-        type: 'body',
-        parameters: [
-          { type: 'text', text: patientName },
-          { type: 'text', text: drugName },
-          { type: 'text', text: dosage },
-          { type: 'text', text: scheduledTime }
-        ]
-      }
-    ];
-  }
+export const sendMedicationReminder = async (
+  to,
+  patientName,
+  scheduledTime,
+  medications,
+  templateName = 'medication_reminder_v3',
+) => {
+  const medicineList = medications
+    .map((med) => {
+      const dosage = med.dosage || (med.form ? `1 ${med.form}` : '');
+      return `• ${med.drugName}${dosage ? `, ${dosage}` : ''}`;
+    })
+    .join('\n');
+
+  const components = [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: patientName },
+        { type: 'text', text: scheduledTime },
+        { type: 'text', text: medicineList },
+      ],
+    },
+  ];
 
   return sendWhatsAppTemplate(to, templateName, components);
 };
@@ -103,21 +108,17 @@ export const sendMedicationReminder = async (to, patientName, drugName, dosage, 
  * 
  * @param {string} to - Recipient's phone number.
  * @param {string} patientName - Name of the patient.
- * @param {string} [templateName="hello_world"] - Template name.
+ * @param {string} [templateName="onboarding_v1"] - Template name.
  */
-export const sendOnboardingMessage = async (to, patientName, templateName = 'hello_world') => {
-  let components = [];
-  
-  if (templateName !== 'hello_world') {
-    components = [
-      {
-        type: 'body',
-        parameters: [
-          { type: 'text', text: patientName }
-        ]
-      }
-    ];
-  }
+export const sendOnboardingMessage = async (to, patientName, templateName = 'onboarding_v1') => {
+  const components = [
+    {
+      type: 'body',
+      parameters: [
+        { type: 'text', text: patientName }
+      ]
+    }
+  ];
 
   return sendWhatsAppTemplate(to, templateName, components);
 };

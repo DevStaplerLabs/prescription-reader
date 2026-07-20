@@ -52,5 +52,57 @@ This document tracks the technical compromises made to accelerate the developmen
 * **Trade-off:** Non-compliant with the "Right to be Forgotten" and storage limitation principles under modern privacy laws.
 * **Production Fix:** Implement automatic TTL (Time-To-Live) indexes in MongoDB to purge/anonymize health records after a specified period or when the user requests account deletion.
 
+### Consent, Phone Verification & Privacy Claims
+* **Current Approach:** Consent is collected only in the Flutter UI, phone numbers are not verified, and the app states that health data is encrypted at rest and images are deleted even though these controls are not implemented.
+* **Trade-off:** The application cannot prove consent or ownership of a WhatsApp number, and its privacy copy does not reflect actual data handling.
+* **Production Fix:** Record versioned consent server-side, verify ownership through OTP, obtain and record explicit WhatsApp opt-in, align privacy copy with implementation, and add account deletion/data-export controls.
+
+---
+
+## 4. Reminder Delivery Reliability
+
+### Duplicate Reminder Prevention
+* **Current Approach:** The cron job sends a matching reminder immediately without recording a delivery key.
+* **Trade-off:** A server restart or multiple backend instances can send the same reminder more than once.
+* **Production Fix:** Add an idempotent reminder-delivery record keyed by schedule, medication group, date, and time; use an outbox/queue before sending.
+
+### WhatsApp Send Failures
+* **Current Approach:** Failed WhatsApp sends are logged only.
+* **Trade-off:** Failed reminders are lost with no retry, monitoring, or support visibility.
+* **Production Fix:** Persist delivery attempts, retry transient failures with a bounded backoff, and add error monitoring/alerts. Live-test every approved WhatsApp template, including grouped newline/bullet lists.
+
+### Follow-Up and Appointment Notifications
+* **Current Approach:** Follow-up information is extracted and stored, but only medication reminders are scheduled.
+* **Trade-off:** Users do not receive reminders for follow-up visits, tests, or appointments.
+* **Production Fix:** Add scheduled notification flows for follow-ups, tests, and appointments after the medicine-reminder MVP is stable.
+
+---
+
+## 5. Data Integrity & Medical Safety
+
+### Client-Controlled Prescription Data
+* **Current Approach:** The client submits the final prescription payload and confirmation currently normalizes some fields, including form, route, duration unit, and special instructions.
+* **Trade-off:** Important prescription details can be changed or discarded before the schedule is saved.
+* **Production Fix:** Validate the complete payload server-side, preserve parsed fields unless explicitly edited, and add a clear user-review acknowledgement before reminders begin.
+
+### Missing Ownership Checks
+* **Current Approach:** Schedule and prescription routes accept patient phone numbers and record IDs without authenticated ownership verification.
+* **Trade-off:** A caller can potentially access or alter another patient’s schedule.
+* **Production Fix:** Add authenticated users and enforce ownership on every patient, prescription, and schedule query/mutation.
+
+---
+
+## 6. Mobile Release Readiness & Quality
+
+### iOS Capture Permissions
+* **Current Approach:** The iOS project lacks camera and photo-library usage descriptions required by the image picker.
+* **Trade-off:** Image capture or selection can fail on iOS.
+* **Production Fix:** Add localized `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` entries, then test on a physical iPhone.
+
+### Release Configuration and Automated Testing
+* **Current Approach:** Android release signing is still a TODO, the app label is unfinished, and there is no automated backend test suite, Flutter test suite, or CI pipeline.
+* **Trade-off:** Regressions can reach users and builds are not release-ready.
+* **Production Fix:** Configure release signing and app metadata, then add targeted integration tests and CI checks before a wider rollout.
+
 
 C:\Users\ASUS\flutter\bin\flutter.bat run -d chrome --web-port=5556

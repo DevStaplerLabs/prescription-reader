@@ -1,5 +1,6 @@
 import { parseImageWithGemini, parseTextWithGemini } from './geminiService.js';
 import { extractTextFromImage } from './visionService.js';
+import { getIstDayBounds } from '../utils/istDate.js';
 
 /**
  * The master prompt for Gemini to extract structured prescription data from an image.
@@ -416,11 +417,15 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
   };
 
   const medications = parsedData.medications.map((med) => {
-    // Build scheduled times from frequency
-    const scheduledTimes = [];
-    if (med.frequency.morning > 0) scheduledTimes.push(TIME_SLOTS.morning);
-    if (med.frequency.afternoon > 0) scheduledTimes.push(TIME_SLOTS.afternoon);
-    if (med.frequency.night > 0) scheduledTimes.push(TIME_SLOTS.night);
+    // Use the patient's choices from the confirmation screen when provided.
+    // Otherwise, generate the conventional defaults from the prescription.
+    const defaultScheduledTimes = [];
+    if (med.frequency.morning > 0) defaultScheduledTimes.push(TIME_SLOTS.morning);
+    if (med.frequency.afternoon > 0) defaultScheduledTimes.push(TIME_SLOTS.afternoon);
+    if (med.frequency.night > 0) defaultScheduledTimes.push(TIME_SLOTS.night);
+    const scheduledTimes = Array.isArray(med.scheduledTimes)
+      ? [...new Set(med.scheduledTimes.filter((time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time)))].sort()
+      : defaultScheduledTimes;
 
     // Calculate end date
     let durationDays = 0;
@@ -440,12 +445,12 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
 
     // A duration is inclusive. A five-day prescription should run on five
     // calendar dates, not until the same time on a sixth date.
-    const scheduleStartDate = new Date(startDate);
-    scheduleStartDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(scheduleStartDate);
-    endDate.setDate(endDate.getDate() + Math.max(durationDays, 1) - 1);
-    endDate.setHours(23, 59, 59, 999);
+    const scheduleStartDate = getIstDayBounds(startDate).start;
+    const endDate = new Date(
+      scheduleStartDate.getTime() +
+        Math.max(durationDays, 1) * 24 * 60 * 60 * 1000 -
+        1,
+    );
 
     // Sanitize enum fields to only allow values accepted by the Schedule model
     const VALID_MEAL_INSTRUCTIONS = ['before', 'after', 'with'];
@@ -462,6 +467,7 @@ export const generateScheduleFromParsed = (parsedData, startDate = new Date()) =
       form: med.form,
       dosage: med.dosage,
       scheduledTimes,
+      reminderEnabled: med.reminderEnabled !== false,
       startDate: scheduleStartDate,
       endDate,
       mealInstruction,

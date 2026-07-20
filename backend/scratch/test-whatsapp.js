@@ -16,9 +16,12 @@ const runTest = async () => {
     const response = await sendMedicationReminder(
       recipient,
       'John Doe',          // patientName ({{1}})
-      'Amoxicillin 500mg', // drugName ({{2}})
-      '1 capsule',         // dosage ({{3}})
-      '08:00 AM'           // scheduledTime ({{4}})
+      '08:00 AM',          // scheduledTime ({{2}})
+      [
+        { drugName: 'Amoxicillin 500mg', dosage: '1 capsule' },
+        { drugName: 'Vitamin D3', dosage: '1 tablet' },
+      ],                  // newline-separated medicine list ({{3}})
+      'medication_reminder_v3',
     );
     console.log('\n--- Success! ---');
     console.log(JSON.stringify(response, null, 2));

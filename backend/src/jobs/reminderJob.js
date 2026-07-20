@@ -1,6 +1,16 @@
 import cron from 'node-cron';
 import Schedule from '../models/Schedule.js';
 import { sendMedicationReminder } from '../services/notificationService.js';
+import { getIstDayBounds } from '../utils/istDate.js';
+
+const formatReminderTime = (time) => {
+  const [hourText, minute = '00'] = time.split(':');
+  const hour = Number.parseInt(hourText, 10);
+  if (Number.isNaN(hour)) return time;
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minute} ${suffix}`;
+};
 
 /**
  * Checks all active schedules in the database and triggers reminders for medications
@@ -16,12 +26,9 @@ export const checkAndSendReminders = async () => {
 
     console.log(`[Reminder Job] Waking up. Current time (IST): ${currentTimeStr}. Checking schedules...`);
 
-    // Define the start and end of today's date boundaries to check date ranges accurately
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Medication dates are calendar dates in India, so boundaries must not
+    // depend on the server's timezone (which is commonly UTC in production).
+    const { start: todayStart, end: todayEnd } = getIstDayBounds(now);
 
     // Query active schedules containing at least one medication active today in this time slot
     const activeSchedules = await Schedule.find({
@@ -60,23 +67,27 @@ export const checkAndSendReminders = async () => {
         return med.reminderEnabled !== false && inDateRange && matchesTime;
       });
 
-      for (const med of matchingMeds) {
-        try {
-          const dosage = med.dosage || (med.form ? `1 ${med.form}` : '1 dose');
-          console.log(`[Reminder Job] Dispatching reminder to ${patientName} (${patientPhone}) for ${med.drugName} (${dosage})`);
+      if (matchingMeds.length === 0) continue;
 
-          // For Phase 1, we send the template-based WhatsApp message.
-          await sendMedicationReminder(
-            patientPhone,
-            patientName,
-            med.drugName,
-            dosage,
-            currentTimeStr,
-            'medication_reminder_v2'
-          );
-        } catch (err) {
-          console.error(`[Reminder Job] Failed to send reminder for ${med.drugName} to ${patientPhone}:`, err.message);
-        }
+      try {
+        console.log(
+          `[Reminder Job] Dispatching one reminder to ${patientName} (${patientPhone}) for ${matchingMeds.length} medication(s).`,
+        );
+
+        // The template's third parameter is a newline-separated bulleted list,
+        // allowing one WhatsApp message to cover every medicine due right now.
+        await sendMedicationReminder(
+          patientPhone,
+          patientName,
+          formatReminderTime(currentTimeStr),
+          matchingMeds,
+          'medication_reminder_v3',
+        );
+      } catch (err) {
+        console.error(
+          `[Reminder Job] Failed to send grouped reminder to ${patientPhone}:`,
+          err.message,
+        );
       }
     }
   } catch (error) {
