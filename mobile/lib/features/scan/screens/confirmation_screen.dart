@@ -331,7 +331,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: Column(
         children: [
-          // Yellow Header Bar matching StaplerLabs theme
+          // Theme Header Bar
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(
@@ -342,7 +342,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
             ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.accentColor, Color(0xFFE5B600)],
+                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -357,7 +357,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                 Text(
                   'Confirm Details',
                   style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.primaryColor,
+                    color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -373,7 +373,7 @@ class _ConfirmationScreenState extends ConsumerState<ConfirmationScreen> {
                   child: const Center(
                     child: Icon(
                       Icons.help_outline_rounded,
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                       size: 20,
                     ),
                   ),

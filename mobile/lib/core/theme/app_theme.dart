@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF0D2545); // StaplerLabs Deep Navy
-  static const Color secondaryColor = Color(0xFF162F54); // Secondary Navy
-  static const Color accentColor = Color(0xFFF5C400);  // StaplerLabs Gold/Yellow
-  static const Color successColor = Color(0xFF059669); // Success/Adherent Green
-  static const Color warningColor = Color(0xFFF5C400); // Warning/Pending Gold
-  static const Color dangerColor = Color(0xFFEF4444);  // Danger Red
-  static const Color backgroundColor = Color(0xFFF9F8F6); // Warm Off-White
+  static const Color primaryColor = Color(0xFF2C3E50); // SIH Slate Blue
+  static const Color secondaryColor = Color(0xFF34495E); // Secondary Slate
+  static const Color accentColor = Color(0xFF1ABC9C);  // Medical Teal
+  static const Color successColor = Color(0xFF2ECC71); // Success Green
+  static const Color warningColor = Color(0xFFF39C12); // Warning Orange
+  static const Color dangerColor = Color(0xFFE74C3C);  // Danger Red
+  static const Color backgroundColor = Color(0xFFF8F9FA); // Clean Medical White
   static const Color cardColor = Colors.white;
 
   static List<BoxShadow> get premiumShadow => [
         BoxShadow(
-          color: const Color(0xFF0D2545).withValues(alpha: 0.06),
+          color: const Color(0xFF2C3E50).withValues(alpha: 0.06),
           offset: const Offset(0, 4),
           blurRadius: 20,
           spreadRadius: 0,
@@ -35,7 +35,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: accentColor,
-          foregroundColor: primaryColor,
+          foregroundColor: Colors.white,
           elevation: 0,
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(

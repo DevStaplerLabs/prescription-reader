@@ -180,33 +180,16 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        // Left Logo (StaplerLabs Logo + Title + Tagline)
+                        // Left Logo Text
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: Colors.white,
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  'assets/images/logo.png',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Prescription Reader',
+                                  'MediKiosk',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: AppTheme.primaryColor,
                                     fontSize: 16,
@@ -215,7 +198,7 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Powered by StaplerLabs',
+                                  'Powered by Team Codebit',
                                   style: GoogleFonts.plusJakartaSans(
                                     color: Colors.grey.shade500,
                                     fontSize: 10,

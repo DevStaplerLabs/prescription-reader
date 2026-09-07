@@ -84,7 +84,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             padding: const EdgeInsets.only(top: 54, bottom: 24, left: 24, right: 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.accentColor, Color(0xFFE5B600)],
+                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -103,7 +103,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       child: Text(
                         'Prescription History',
                         style: GoogleFonts.plusJakartaSans(
-                          color: AppTheme.primaryColor,
+                          color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
@@ -112,27 +112,21 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    // StaplerLabs Logo integrated into header
+                    // Codebit Logo integrated into header
                     Container(
                       height: 28,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(6),
-                        color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                        color: Colors.white.withValues(alpha: 0.15),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset(
-                            'assets/images/logo.png',
-                            height: 18,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 6),
                           Text(
-                            'STAPLERLABS',
+                            'TEAM CODEBIT',
                             style: GoogleFonts.plusJakartaSans(
-                              color: AppTheme.primaryColor,
+                              color: Colors.white,
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.0,
@@ -147,7 +141,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 Text(
                   'View and restore your previous active schedules',
                   style: GoogleFonts.plusJakartaSans(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -210,7 +204,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       final pastSchedule = history[index];
                       final extData = pastSchedule['prescriptionId']?['extractedData'];
                       final clinic = extData?['clinicName'] ?? 'General Clinic';
-                      final doctor = extData?['doctorName'] ?? 'Prescription Reader';
+                      final doctor = extData?['doctorName'] ?? 'MediKiosk';
                       final meds = pastSchedule['medications'] as List<dynamic>? ?? [];
 
                       return Container(

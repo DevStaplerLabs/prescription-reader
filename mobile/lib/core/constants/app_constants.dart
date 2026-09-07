@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'Prescription Reader';
+  static const String appName = 'MediKiosk';
 
   // API Endpoints
   static const String baseUrl = 'https://prescription-reader-j3j9.onrender.com/api';

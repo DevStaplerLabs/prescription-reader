@@ -624,7 +624,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.accentColor, Color(0xFFE5B600)],
+          colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -637,55 +637,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Clinic Logo and Title Row (Glassmorphic)
+          // App Title Row
           Row(
             children: [
-              // StaplerLabs Logo Container
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.22),
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Prescription Reader",
+                    "MediKiosk",
                     style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 18,
                       letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    "Powered by StaplerLabs",
+                    "Powered by Team Codebit",
                     style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.65),
-                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -699,10 +671,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -714,11 +686,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   width: 8,
                   height: 8,
                   decoration: const BoxDecoration(
-                    color: AppTheme.primaryColor,
+                    color: AppTheme.accentColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primaryColor,
+                        color: AppTheme.accentColor,
                         blurRadius: 4,
                         spreadRadius: 0.5,
                       ),
@@ -730,7 +702,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Text(
                     appointmentText,
                     style: GoogleFonts.plusJakartaSans(
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),

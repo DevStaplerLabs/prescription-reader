@@ -94,7 +94,7 @@ class PrescriptionApp extends ConsumerWidget {
     final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
-      title: 'Prescription Reader',
+      title: 'MediKiosk',
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
