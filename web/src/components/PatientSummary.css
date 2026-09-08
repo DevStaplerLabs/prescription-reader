@@ -1,0 +1,531 @@
+/* ──────────────────────────────────────────────
+   PATIENT SUMMARY FANCY POPUP MODAL
+   ────────────────────────────────────────────── */
+
+.psm-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(11, 31, 28, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: psmFadeIn 0.22s ease-out;
+}
+
+@keyframes psmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.psm-dialog {
+  background: #FAFAF7;
+  border: 1px solid #E2E8DC;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  overflow: hidden;
+  transform: scale(0.96);
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.psm-dialog.psm-visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Top Sticky Bar */
+.psm-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #E2E8DC;
+  flex-shrink: 0;
+}
+
+.psm-top-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0B1F1C;
+}
+
+.psm-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F1F5F9;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.psm-close-btn:hover {
+  background: #EF4444;
+  color: #ffffff;
+}
+
+/* Scrollable Content */
+.psm-content {
+  padding: 24px 28px 32px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.psm-content::-webkit-scrollbar {
+  width: 6px;
+}
+.psm-content::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+/* Vitals Ribbon */
+.ps-vitals-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #E2E8DC;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.ps-v-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-v-lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.ps-v-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0B1F1C;
+}
+
+/* Header */
+.ps-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E2E8DC;
+}
+
+.ps-patient-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0B1F1C;
+  letter-spacing: -0.025em;
+  margin-bottom: 4px;
+}
+
+.ps-abha-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ps-abha-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  color: #4B5563;
+}
+
+.ps-verified {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #0E7C66;
+  background: #E8F5F1;
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+
+.ps-meta-row {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ps-meta-dot { color: #D1D5DB; }
+
+.ps-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  color: #4B5563;
+}
+
+.ps-flag-chip {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+/* Generic Card */
+.ps-card {
+  background: #ffffff;
+  border: 1px solid #E2E8DC;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.ps-card-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94A3A3;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* AI Summary Card */
+.ps-ai-card {
+  background: linear-gradient(135deg, #F0FDF9 0%, #E8F5F1 100%);
+  border-color: rgba(14,124,102,0.2);
+}
+
+.ps-ai-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ps-ai-title-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ps-ai-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0B1F1C;
+}
+
+.ps-ai-pill {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: #0E7C66;
+  background: rgba(14,124,102,0.1);
+  border: 1px solid rgba(14,124,102,0.2);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.ps-confidence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ps-conf-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0E7C66;
+  line-height: 1;
+}
+
+.ps-conf-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  color: #64748B;
+}
+
+.ps-ai-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  color: #1E293B;
+  line-height: 1.65;
+}
+
+/* Chief Complaint */
+.ps-quote-block {
+  position: relative;
+  background: #F8FAFC;
+  border-radius: 10px;
+  padding: 12px 16px 12px 20px;
+  margin-bottom: 12px;
+  border-left: 3px solid #0E7C66;
+}
+
+.ps-quote-mark {
+  position: absolute;
+  top: -4px;
+  left: 8px;
+  font-size: 2.5rem;
+  color: #CBD5E1;
+  font-family: Georgia, serif;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.ps-patient-words {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.ps-clinical-frame {
+  background: #FAFAF7;
+  border: 1px solid #E2E8DC;
+  border-radius: 9px;
+  padding: 10px 14px;
+}
+
+.ps-frame-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94A3A3;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.ps-frame-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: #0B1F1C;
+  font-weight: 500;
+}
+
+/* Extracted Docs */
+.ps-doc-meta-row {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E2E8DC;
+  margin-bottom: 12px;
+}
+
+.ps-doc-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.ps-field-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: #94A3A3;
+  text-transform: uppercase;
+}
+
+.ps-field-val {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.84rem;
+  color: #0B1F1C;
+  font-weight: 500;
+}
+
+.ps-mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  color: #4B5563;
+}
+
+.ps-med-thead {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 1fr;
+  gap: 8px;
+  padding: 5px 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #94A3A3;
+  text-transform: uppercase;
+}
+
+.ps-med-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 1fr;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  color: #334155;
+  align-items: center;
+}
+
+.ps-med-row.alt { background: #F8FAFC; }
+
+.ps-med-name {
+  font-weight: 600;
+  color: #0B1F1C;
+}
+
+/* AYUSH */
+.ps-ayush-card {
+  background: #FBF6EE;
+  border-color: #E8D9C0;
+}
+
+.ps-ayush-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.ps-ayush-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #5A4E3A;
+}
+
+.ps-ayush-section { margin-bottom: 12px; }
+
+.ps-ayush-row-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #7C6E50;
+  margin-bottom: 6px;
+}
+
+.ps-ayush-row-label span {
+  font-weight: 400;
+  color: #A89070;
+}
+
+.ayush-bar {
+  display: flex;
+  height: 28px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ayush-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ayush-seg-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.92);
+}
+
+.ayush-seg.vata  { background: #6B7FD7; }
+.ayush-seg.pitta { background: #E08E45; }
+.ayush-seg.kapha { background: #5A9367; }
+
+.ps-ayush-caption {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  color: #A89070;
+  font-style: italic;
+  margin-top: 6px;
+}
+
+/* Actions */
+.ps-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+.ps-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #0E7C66;
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(14,124,102,0.28);
+}
+
+.ps-btn-primary:hover { background: #0B6855; }
+
+.ps-btn-outline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: white;
+  color: #0E7C66;
+  border: 1px solid #0E7C66;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ps-btn-outline:hover { background: #E8F5F1; }
+
+.ps-btn-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #64748B;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}

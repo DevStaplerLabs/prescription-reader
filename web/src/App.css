@@ -1,0 +1,41 @@
+/* ─────────────────────────────────────────────
+   APP LAYOUT — Sidebar + Multi-tab Content View
+   ───────────────────────────────────────────── */
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #FAFAF7;
+}
+
+.dash-main-content {
+  flex: 1;
+  margin-left: 240px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-body {
+  flex: 1;
+  background: #FAFAF7;
+  overflow-y: auto;
+}
+
+/* Scrollbar */
+.dash-body::-webkit-scrollbar {
+  width: 6px;
+}
+.dash-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dash-body::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 3px;
+}
+
+@media (max-width: 860px) {
+  .dash-main-content {
+    margin-left: 0;
+  }
+}

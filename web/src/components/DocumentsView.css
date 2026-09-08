@@ -1,0 +1,266 @@
+/* ──────────────────────────────────────
+   DOCUMENTS VIEW
+   ────────────────────────────────────── */
+.dv-root {
+  padding: 28px 32px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dv-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0B1F1C;
+  letter-spacing: -0.02em;
+}
+
+.dv-subtitle {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.dv-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ECFDF5;
+  color: #0E7C66;
+  border: 1px solid #A7F3D0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.dv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dv-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #E2E8DC;
+  padding: 10px 16px;
+  border-radius: 12px;
+  width: 340px;
+}
+
+.dv-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.86rem;
+  color: #0F172A;
+  width: 100%;
+}
+
+.dv-type-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.dv-pill {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #E2E8DC;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.dv-pill.active {
+  background: #0E7C66;
+  color: #ffffff;
+  border-color: #0E7C66;
+  font-weight: 600;
+}
+
+.dv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .dv-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .dv-grid { grid-template-columns: 1fr; }
+}
+
+.dv-card {
+  background: #ffffff;
+  border: 1px solid #E2E8DC;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.dv-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.dv-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dv-type-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #EFF6FF;
+  color: #2563EB;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.dv-date-mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.76rem;
+  color: #64748B;
+}
+
+.dv-patient-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0B1F1C;
+}
+
+.dv-abha-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.dv-mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.76rem;
+  color: #4B5563;
+}
+
+.dv-doctor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dv-lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+}
+
+.dv-doctor-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #0B1F1C;
+}
+
+.dv-meds-box {
+  background: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.dv-meds-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #0E7C66;
+  margin-bottom: 6px;
+}
+
+.dv-meds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dv-med-chip {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+}
+
+.dv-med-name {
+  font-weight: 600;
+  color: #334155;
+}
+
+.dv-med-dos {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #64748B;
+}
+
+.dv-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.dv-ocr-score {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #0E7C66;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dv-btn-view {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #ECFDF5;
+  color: #0E7C66;
+  border: 1px solid #A7F3D0;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
