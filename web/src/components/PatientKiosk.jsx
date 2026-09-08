@@ -101,23 +101,16 @@ export default function PatientKiosk({ onExit }) {
   const [interimText, setInterimText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [autoExtracted, setAutoExtracted] = useState([]);
-  const [speechSupported, setSpeechSupported] = useState(true);
   const [speechError, setSpeechError] = useState("");
   const [isSpeakingTTS, setIsSpeakingTTS] = useState(false);
   const [tokenNumber, setTokenNumber] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
   const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false);  // source-of-truth flag to avoid stale-closure bugs
+  const simulIntervalRef = useRef(null);  // for cleanup of fallback simulation
 
   const selectedLang = LANGUAGES.find(l => l.code === lang);
-
-  // Initialize browser speech recognition check
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (step === 5 && !tokenNumber) {
@@ -125,11 +118,17 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
-  // Clean up speech recognition on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isListeningRef.current = false;
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try { recognitionRef.current.abort(); } catch (e) {}
+        recognitionRef.current = null;
+      }
+      if (simulIntervalRef.current) {
+        clearInterval(simulIntervalRef.current);
+        simulIntervalRef.current = null;
       }
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -154,26 +153,67 @@ export default function PatientKiosk({ onExit }) {
     }
   };
 
+  const runSimulatedVoiceInput = (langCode) => {
+    // Stop any existing simulation
+    if (simulIntervalRef.current) {
+      clearInterval(simulIntervalRef.current);
+      simulIntervalRef.current = null;
+    }
+    isListeningRef.current = true;
+    setIsListening(true);
+    setInterimText("");
+    setSpeechError("");
+
+    const phrases = FALLBACK_SPEECH_PHRASES[langCode] || FALLBACK_SPEECH_PHRASES.en;
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    let charIdx = 0;
+
+    simulIntervalRef.current = setInterval(() => {
+      charIdx += 3;
+      if (charIdx <= phrase.length) {
+        setInterimText(phrase.substring(0, charIdx));
+      } else {
+        clearInterval(simulIntervalRef.current);
+        simulIntervalRef.current = null;
+        setVoiceText(prev => {
+          const updated = (prev ? prev.trim() + " " : "") + phrase;
+          extractSymptomsFromText(updated);
+          return updated;
+        });
+        setInterimText("");
+        isListeningRef.current = false;
+        setIsListening(false);
+      }
+    }, 80);
+  };
+
   const startListening = () => {
+    if (isListeningRef.current) return;  // already listening
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const currentLang = lang;  // capture in closure
+    const speechCode = selectedLang?.speechCode || "en-IN";
 
     if (!SpeechRecognition) {
-      // Fallback if browser Web Speech API is unavailable
-      runSimulatedVoiceInput();
+      runSimulatedVoiceInput(currentLang);
       return;
     }
 
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
+    // Tear down any existing instance first
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
+    }
 
+    try {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = selectedLang?.speechCode || "en-IN";
+      recognition.maxAlternatives = 1;
+      recognition.lang = speechCode;
 
       recognition.onstart = () => {
+        isListeningRef.current = true;
         setIsListening(true);
         setSpeechError("");
         setInterimText("");
@@ -182,16 +222,14 @@ export default function PatientKiosk({ onExit }) {
       recognition.onresult = (event) => {
         let finalStr = "";
         let interimStr = "";
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             finalStr += event.results[i][0].transcript + " ";
           } else {
             interimStr += event.results[i][0].transcript;
           }
         }
-
-        if (finalStr) {
+        if (finalStr.trim()) {
           setVoiceText(prev => {
             const updated = (prev ? prev.trim() + " " : "") + finalStr.trim();
             extractSymptomsFromText(updated);
@@ -203,16 +241,35 @@ export default function PatientKiosk({ onExit }) {
 
       recognition.onerror = (event) => {
         console.warn("Speech recognition error:", event.error);
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          setSpeechError("Microphone access denied. Using fallback voice simulation.");
-          runSimulatedVoiceInput();
-        } else if (event.error !== 'no-speech') {
-          setSpeechError(`Voice error: ${event.error}. Click mic to retry.`);
-        }
+        const fatalErrors = ['not-allowed', 'service-not-allowed', 'no-default-microphone'];
+        const networkErrors = ['network', 'audio-capture', 'aborted'];
+        isListeningRef.current = false;
         setIsListening(false);
+        setInterimText("");
+        if (fatalErrors.includes(event.error)) {
+          setSpeechError("Mic access denied. Tap mic to use voice simulation instead.");
+          recognitionRef.current = null;
+        } else if (networkErrors.includes(event.error)) {
+          setSpeechError("Voice network error — switching to offline simulation.");
+          recognitionRef.current = null;
+          // Auto-run simulation after short delay
+          setTimeout(() => runSimulatedVoiceInput(currentLang), 300);
+        } else if (event.error === 'no-speech') {
+          // Ignore no-speech — just clear interim, stay ready
+          setInterimText("");
+          isListeningRef.current = false;
+          setIsListening(false);
+        } else {
+          setSpeechError(`Voice error: ${event.error} — tap mic to retry.`);
+          recognitionRef.current = null;
+        }
       };
 
       recognition.onend = () => {
+        // Only flip state if we haven't been explicitly stopped
+        if (isListeningRef.current) {
+          isListeningRef.current = false;
+        }
         setIsListening(false);
         setInterimText("");
       };
@@ -220,45 +277,32 @@ export default function PatientKiosk({ onExit }) {
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error("Speech recognition start failed:", err);
-      runSimulatedVoiceInput();
+      console.error("Speech start failed:", err);
+      isListeningRef.current = false;
+      setIsListening(false);
+      setSpeechError("Browser voice API unavailable — using simulation.");
+      setTimeout(() => runSimulatedVoiceInput(currentLang), 200);
     }
   };
 
   const stopListening = () => {
+    isListeningRef.current = false;
+    // Stop real recognition
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    // Stop simulation
+    if (simulIntervalRef.current) {
+      clearInterval(simulIntervalRef.current);
+      simulIntervalRef.current = null;
     }
     setIsListening(false);
     setInterimText("");
   };
 
-  const runSimulatedVoiceInput = () => {
-    setIsListening(true);
-    setSpeechError("");
-    const phrases = FALLBACK_SPEECH_PHRASES[lang] || FALLBACK_SPEECH_PHRASES.en;
-    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
-
-    let charIdx = 0;
-    const interval = setInterval(() => {
-      charIdx += 4;
-      if (charIdx <= phrase.length) {
-        setInterimText(phrase.substring(0, charIdx));
-      } else {
-        clearInterval(interval);
-        setVoiceText(prev => {
-          const updated = (prev ? prev.trim() + " " : "") + phrase;
-          extractSymptomsFromText(updated);
-          return updated;
-        });
-        setInterimText("");
-        setIsListening(false);
-      }
-    }, 100);
-  };
-
   const toggleVoice = () => {
-    if (isListening) {
+    if (isListeningRef.current) {
       stopListening();
     } else {
       startListening();
@@ -463,7 +507,7 @@ export default function PatientKiosk({ onExit }) {
             </span>
           </div>
 
-          <button className={"voice-record-btn" + (isListening ? " listening" : "")} onClick={toggleVoice}>
+          <button type="button" className={"voice-record-btn" + (isListening ? " listening" : "")} onClick={toggleVoice}>
             <div className="voice-btn-inner">
               {isListening ? (
                 <>
@@ -475,7 +519,7 @@ export default function PatientKiosk({ onExit }) {
                 <>
                   <Mic size={22} />
                   <span className="mic-status-text">Tap mic &amp; speak your symptoms</span>
-                  <span className="mic-subtext">Supports Hindi, English &amp; regional languages</span>
+                  <span className="mic-subtext">Works in Hindi, English &amp; 6 more languages</span>
                 </>
               )}
             </div>
@@ -495,9 +539,17 @@ export default function PatientKiosk({ onExit }) {
           )}
 
           <div className="voice-transcript-area">
+            {/* Live interim speech shown as a separate overlay so controlled input isn't blocked */}
+            {interimText && (
+              <div className="interim-text-preview">
+                <span className="interim-icon"><Mic size={11} /></span>
+                <span className="interim-words">{interimText}</span>
+                <span className="interim-blink" />
+              </div>
+            )}
             <textarea
-              placeholder={`Your spoken words in ${selectedLang?.name} will appear here live... or type directly`}
-              value={voiceText + (interimText ? (voiceText ? " " : "") + interimText : "")}
+              placeholder={`Your spoken words in ${selectedLang?.name} will appear here... or type directly`}
+              value={voiceText}
               onChange={e => {
                 setVoiceText(e.target.value);
                 extractSymptomsFromText(e.target.value);
@@ -508,6 +560,7 @@ export default function PatientKiosk({ onExit }) {
               {voiceText && (
                 <div className="transcript-actions-left">
                   <button
+                    type="button"
                     className={"tts-btn" + (isSpeakingTTS ? " speaking" : "")}
                     onClick={() => playTTS(voiceText)}
                     title="Read aloud transcript"
@@ -515,7 +568,7 @@ export default function PatientKiosk({ onExit }) {
                     {isSpeakingTTS ? <VolumeX size={12} /> : <Volume2 size={12} />}
                     {isSpeakingTTS ? "Stop Reading" : "Read Aloud"}
                   </button>
-                  <button className="clear-text-btn" onClick={clearVoiceText} title="Clear transcript">
+                  <button type="button" className="clear-text-btn" onClick={clearVoiceText} title="Clear transcript">
                     <X size={12} /> Clear
                   </button>
                 </div>

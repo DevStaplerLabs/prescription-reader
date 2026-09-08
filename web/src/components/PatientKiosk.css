@@ -406,6 +406,27 @@
 }
 .voice-transcript-area textarea:focus { border-color: var(--k-teal); }
 
+/* Live interim speech preview -- shown above the saved textarea */
+.interim-text-preview {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(90deg, #EEF9F5, #F6FBF9);
+  border: 1.5px solid var(--k-teal); border-radius: 10px;
+  padding: 10px 14px; font-size: 0.86rem; line-height: 1.5;
+  font-family: "Inter", sans-serif; color: var(--k-ink);
+  animation: interimFadeIn 0.15s ease;
+}
+@keyframes interimFadeIn { from { opacity: 0.4; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+.interim-icon { color: var(--k-teal); flex-shrink: 0; }
+.interim-words { flex: 1; color: var(--k-ink); opacity: 0.85; }
+.interim-blink {
+  width: 2px; height: 1em; background: var(--k-teal);
+  border-radius: 2px; flex-shrink: 0;
+  animation: blinkCursor 0.8s steps(1) infinite;
+}
+@keyframes blinkCursor { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+
+
 .transcript-actions-bar {
   display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
 }
