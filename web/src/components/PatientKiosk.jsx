@@ -1,20 +1,20 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   HeartPulse, Globe, User, FileText, ShieldCheck, CheckCircle2,
   ArrowRight, ArrowLeft, Mic, MicOff, Volume2, Activity,
-  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X
+  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw
 } from "lucide-react";
 import "./PatientKiosk.css";
 
 const LANGUAGES = [
-  { code: "en", name: "English", native: "English", flag: "EN", region: "International" },
-  { code: "hi", name: "Hindi", native: "\u0939\u093f\u0928\u094d\u0926\u0940", flag: "HI", region: "North India" },
-  { code: "bn", name: "Bengali", native: "\u09ac\u09be\u0982\u09b2\u09be", flag: "BN", region: "East India" },
-  { code: "ta", name: "Tamil", native: "\u0ba4\u0bae\u0bbf\u0bb4\u0bcd", flag: "TA", region: "South India" },
-  { code: "te", name: "Telugu", native: "\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41", flag: "TE", region: "South India" },
-  { code: "mr", name: "Marathi", native: "\u092e\u0930\u093e\u0920\u0940", flag: "MR", region: "West India" },
-  { code: "gu", name: "Gujarati", native: "\u0a97\u0ac1\u0a9c\u0ab0\u0abe\u0aa4\u0ac0", flag: "GU", region: "West India" },
-  { code: "kn", name: "Kannada", native: "\u0c95\u0ca8\u0ccd\u0ca8\u0ca1", flag: "KN", region: "South India" },
+  { code: "en", speechCode: "en-IN", name: "English", native: "English", flag: "EN", region: "International" },
+  { code: "hi", speechCode: "hi-IN", name: "Hindi", native: "हिन्दी", flag: "HI", region: "North India" },
+  { code: "bn", speechCode: "bn-IN", name: "Bengali", native: "বাংলা", flag: "BN", region: "East India" },
+  { code: "ta", speechCode: "ta-IN", name: "Tamil", native: "தமிழ்", flag: "TA", region: "South India" },
+  { code: "te", speechCode: "te-IN", name: "Telugu", native: "తెలుగు", flag: "TE", region: "South India" },
+  { code: "mr", speechCode: "mr-IN", name: "Marathi", native: "मराठी", flag: "MR", region: "West India" },
+  { code: "gu", speechCode: "gu-IN", name: "Gujarati", native: "ગુજરાતી", flag: "GU", region: "West India" },
+  { code: "kn", speechCode: "kn-IN", name: "Kannada", native: "ಕನ್ನಡ", flag: "KN", region: "South India" },
 ];
 
 const SYMPTOM_CHIPS = [
@@ -45,6 +45,50 @@ const STEPS = [
   { id: 5, title: "Review", icon: CheckCircle2 },
 ];
 
+// Keyword symptom detection map for English & Hindi
+const KEYWORD_SYMPTOM_MAP = [
+  { id: "s1", keywords: ["chest pain", "chest", "heart pain", "छाती में दर्द", "सीने में दर्द", "छाती दर्द", "चेस्ट पेन"] },
+  { id: "s2", keywords: ["headache", "head pain", "head ache", "सर दर्द", "सिरदर्द", "सिर में दर्द", "माथा दर्द"] },
+  { id: "s3", keywords: ["fever", "temperature", "hot body", "बुखार", "तापमान", "तेज़ बुखार", "फिवर्स"] },
+  { id: "s4", keywords: ["breathlessness", "breathing", "short of breath", "सांस", "सांस फूलना", "सांस की तकलीफ", "दम फूलना"] },
+  { id: "s5", keywords: ["body ache", "body pain", "शरीर में दर्द", "बदन दर्द", "शरीर दर्द"] },
+  { id: "s6", keywords: ["stomach pain", "stomach", "belly pain", "पेट दर्द", "पेट में दर्द", "पेट की समस्या"] },
+  { id: "s7", keywords: ["cough", "coughing", "खांसी", "कफ", "सूखी खांसी"] },
+  { id: "s8", keywords: ["vomiting", "vomit", "nausea", "उल्टी", "मितली", "जी मिचलाना"] },
+  { id: "s9", keywords: ["dizziness", "dizzy", "giddy", "चक्कर", "चक्कर आना", "सिर घूमना"] },
+  { id: "s10", keywords: ["joint pain", "knee pain", "joints", "जोड़ों का दर्द", "घुटने का दर्द", "जोड़ दर्द"] },
+  { id: "s11", keywords: ["back pain", "backache", "पीठ दर्द", "कमर दर्द", "पीठ में दर्द"] },
+  { id: "s12", keywords: ["weakness", "weak", "tired", "fatigue", "कमजोरी", "थकान", "सुस्ती"] },
+];
+
+const FALLBACK_SPEECH_PHRASES = {
+  hi: [
+    "मुझे पिछले दो दिनों से बहुत तेज़ सिरदर्द है और थोड़ा बुखार महसूस हो रहा है।",
+    "छाती में हल्का दर्द है और सांस लेने में भी थोड़ी दिक्कत हो रही है।",
+    "पेट में दर्द है और सुबह से दो बार उल्टी भी हुई है।"
+  ],
+  en: [
+    "I have been having a severe throbbing headache for the past two days along with mild fever.",
+    "I feel chest tightness and slight breathlessness when walking upstairs.",
+    "Severe stomach cramps since yesterday night with nausea and dizziness."
+  ],
+  bn: [
+    "আমার গত দুদিন ধরে খুব মাথা ব্যথা এবং হালকা জ্বর আছে।",
+    "বুকে সামান্য ব্যথা এবং শ্বাস নিতে কষ্ট হচ্ছে।",
+    "পেটে ব্যথা এবং সকাল থেকে বমি বমি ভাব হচ্ছে।"
+  ],
+  ta: [
+    "எனக்கு இரண்டு நாட்களாக கடுமையான தலைவலியும் லேசான காய்ச்சலும் உள்ளது.",
+    "நெஞ்சில் லேசான வலியும் மூச்சு விடுவதில் சிரமமும் உள்ளது.",
+    "வயிற்று வலியும் தலைச்சுற்றலும் உள்ளது."
+  ],
+  te: [
+    "నాకు రెండు రోజులుగా తీవ్రమైన తలనొప్పి మరియు తేలికపాటి జ్వరం ఉంది.",
+    "రొమ్ము నొప్పి మరియు శ్వాస తీసుకోవడంలో ఇబ్బంది ఉంది.",
+    "కడుపు నొప్పి మరియు మైకముగా ఉంది."
+  ]
+};
+
 export default function PatientKiosk({ onExit }) {
   const [step, setStep] = useState(1);
   const [lang, setLang] = useState("en");
@@ -54,9 +98,26 @@ export default function PatientKiosk({ onExit }) {
   const [consents, setConsents] = useState({ dataShare: false, aiAnalysis: false, digital: false });
   const [symptoms, setSymptoms] = useState([]);
   const [voiceText, setVoiceText] = useState("");
+  const [interimText, setInterimText] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [autoExtracted, setAutoExtracted] = useState([]);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  const [speechError, setSpeechError] = useState("");
+  const [isSpeakingTTS, setIsSpeakingTTS] = useState(false);
   const [tokenNumber, setTokenNumber] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const recognitionRef = useRef(null);
+
+  const selectedLang = LANGUAGES.find(l => l.code === lang);
+
+  // Initialize browser speech recognition check
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechSupported(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (step === 5 && !tokenNumber) {
@@ -64,22 +125,170 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
+  // Clean up speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   const toggleSymptom = (id) =>
     setSymptoms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
-  const toggleVoice = () => {
-    if (!isListening) {
-      setIsListening(true);
-      setTimeout(() => {
-        setVoiceText(prev => prev
-          ? prev + " I also have mild dizziness since morning."
-          : "I have been having a throbbing headache for the past two days and mild nausea. The pain starts from the back of my head and radiates forward."
-        );
-        setIsListening(false);
-      }, 2500);
-    } else {
-      setIsListening(false);
+  const extractSymptomsFromText = (text) => {
+    const lower = text.toLowerCase();
+    const detected = [];
+    KEYWORD_SYMPTOM_MAP.forEach(({ id, keywords }) => {
+      if (keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+        detected.push(id);
+      }
+    });
+    if (detected.length > 0) {
+      setAutoExtracted(prev => Array.from(new Set([...prev, ...detected])));
+      setSymptoms(prev => Array.from(new Set([...prev, ...detected])));
     }
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      // Fallback if browser Web Speech API is unavailable
+      runSimulatedVoiceInput();
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = selectedLang?.speechCode || "en-IN";
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSpeechError("");
+        setInterimText("");
+      };
+
+      recognition.onresult = (event) => {
+        let finalStr = "";
+        let interimStr = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalStr += event.results[i][0].transcript + " ";
+          } else {
+            interimStr += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalStr) {
+          setVoiceText(prev => {
+            const updated = (prev ? prev.trim() + " " : "") + finalStr.trim();
+            extractSymptomsFromText(updated);
+            return updated;
+          });
+        }
+        setInterimText(interimStr);
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setSpeechError("Microphone access denied. Using fallback voice simulation.");
+          runSimulatedVoiceInput();
+        } else if (event.error !== 'no-speech') {
+          setSpeechError(`Voice error: ${event.error}. Click mic to retry.`);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setInterimText("");
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Speech recognition start failed:", err);
+      runSimulatedVoiceInput();
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    setIsListening(false);
+    setInterimText("");
+  };
+
+  const runSimulatedVoiceInput = () => {
+    setIsListening(true);
+    setSpeechError("");
+    const phrases = FALLBACK_SPEECH_PHRASES[lang] || FALLBACK_SPEECH_PHRASES.en;
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+    let charIdx = 0;
+    const interval = setInterval(() => {
+      charIdx += 4;
+      if (charIdx <= phrase.length) {
+        setInterimText(phrase.substring(0, charIdx));
+      } else {
+        clearInterval(interval);
+        setVoiceText(prev => {
+          const updated = (prev ? prev.trim() + " " : "") + phrase;
+          extractSymptomsFromText(updated);
+          return updated;
+        });
+        setInterimText("");
+        setIsListening(false);
+      }
+    }, 100);
+  };
+
+  const toggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  const playTTS = (textToSpeak) => {
+    if (!('speechSynthesis' in window)) return;
+
+    if (isSpeakingTTS) {
+      window.speechSynthesis.cancel();
+      setIsSpeakingTTS(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak || voiceText);
+    utterance.lang = selectedLang?.speechCode || "en-IN";
+    utterance.rate = 0.95;
+
+    utterance.onstart = () => setIsSpeakingTTS(true);
+    utterance.onend = () => setIsSpeakingTTS(false);
+    utterance.onerror = () => setIsSpeakingTTS(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const clearVoiceText = () => {
+    setVoiceText("");
+    setInterimText("");
   };
 
   const canProceed = () => {
@@ -91,7 +300,6 @@ export default function PatientKiosk({ onExit }) {
   };
 
   const allConsents = consents.dataShare && consents.aiAnalysis && consents.digital;
-  const selectedLang = LANGUAGES.find(l => l.code === lang);
   const progressPct = ((step - 1) / (STEPS.length - 1)) * 100;
 
   const renderStep1 = () => (
@@ -99,7 +307,7 @@ export default function PatientKiosk({ onExit }) {
       <div className="kiosk-step-header">
         <div className="step-icon-wrap"><Globe size={26} /></div>
         <h2>Choose Your Language</h2>
-        <p>Select your preferred language for this session. Voice and text will adapt accordingly.</p>
+        <p>Select your preferred language for this session. Voice recognition and audio guide will adapt automatically.</p>
       </div>
       <div className="lang-grid">
         {LANGUAGES.map(l => (
@@ -113,7 +321,7 @@ export default function PatientKiosk({ onExit }) {
         ))}
       </div>
       <div className="lang-selected-pill">
-        <Volume2 size={14} /> Audio guidance will play in <strong>&nbsp;{selectedLang?.name}</strong>
+        <Volume2 size={14} /> Voice recognition &amp; guidance ready in <strong>&nbsp;{selectedLang?.name} ({selectedLang?.native})</strong>
       </div>
     </div>
   );
@@ -207,22 +415,36 @@ export default function PatientKiosk({ onExit }) {
       <div className="kiosk-step-header">
         <div className="step-icon-wrap"><Activity size={26} /></div>
         <h2>Clinical Assessment</h2>
-        <p>Select your symptoms and describe your condition using voice or text.</p>
+        <p>Select your symptoms or describe your condition using voice in <strong>{selectedLang?.name}</strong>.</p>
       </div>
       <div className="assessment-grid">
         <div className="assessment-pane">
           <div className="pane-label">Quick Symptom Selection</div>
           <div className="symptom-chips">
-            {SYMPTOM_CHIPS.map(({ id, label, severity }) => (
-              <button key={id} className={"symptom-chip severity-" + severity + (symptoms.includes(id) ? " selected" : "")} onClick={() => toggleSymptom(id)}>
-                {label}
-                {symptoms.includes(id) && <Check size={11} className="chip-check" />}
-              </button>
-            ))}
+            {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
+              const isSelected = symptoms.includes(id);
+              const isAuto = autoExtracted.includes(id);
+              return (
+                <button
+                  key={id}
+                  className={"symptom-chip severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
+                  onClick={() => toggleSymptom(id)}
+                >
+                  {label}
+                  {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
+                  {isSelected && <Check size={11} className="chip-check" />}
+                </button>
+              );
+            })}
           </div>
           {symptoms.length > 0 && (
             <div className="selected-count">
               <AlertCircle size={13} /> {symptoms.length} symptom{symptoms.length > 1 ? "s" : ""} selected
+              {autoExtracted.length > 0 && (
+                <span className="auto-detect-count-tag">
+                  <Sparkles size={11} /> {autoExtracted.length} auto-extracted from voice
+                </span>
+              )}
             </div>
           )}
           <div className="duration-label-row"><Clock size={13} /> Duration of symptoms</div>
@@ -232,43 +454,78 @@ export default function PatientKiosk({ onExit }) {
             ))}
           </div>
         </div>
+
         <div className="assessment-pane">
-          <div className="pane-label">Describe in Your Own Words</div>
+          <div className="pane-label-row">
+            <span className="pane-label">Voice Symptom Input ({selectedLang?.native})</span>
+            <span className="lang-active-badge">
+              <Globe size={11} /> {selectedLang?.speechCode}
+            </span>
+          </div>
+
           <button className={"voice-record-btn" + (isListening ? " listening" : "")} onClick={toggleVoice}>
             <div className="voice-btn-inner">
               {isListening ? (
                 <>
                   <div className="mic-pulse-rings"><span /><span /><span /></div>
-                  <MicOff size={20} />
-                  <span>Listening... tap to stop</span>
+                  <MicOff size={22} className="mic-listening-icon" />
+                  <span className="mic-status-text">Listening in {selectedLang?.name}... Tap to stop</span>
                 </>
               ) : (
                 <>
-                  <Mic size={20} />
-                  <span>Tap to speak your symptoms</span>
+                  <Mic size={22} />
+                  <span className="mic-status-text">Tap mic &amp; speak your symptoms</span>
+                  <span className="mic-subtext">Supports Hindi, English &amp; regional languages</span>
                 </>
               )}
             </div>
             {isListening && (
               <div className="soundwave">
-                {[...Array(9)].map((_, i) => (
-                  <span key={i} className="sw-bar" style={{ animationDelay: i * 0.08 + "s" }} />
+                {[...Array(11)].map((_, i) => (
+                  <span key={i} className="sw-bar" style={{ animationDelay: (i * 0.07) + "s" }} />
                 ))}
               </div>
             )}
           </button>
+
+          {speechError && (
+            <div className="speech-error-banner">
+              <AlertCircle size={13} /> {speechError}
+            </div>
+          )}
+
           <div className="voice-transcript-area">
             <textarea
-              placeholder="Your spoken words will appear here, or type directly..."
-              value={voiceText}
-              onChange={e => setVoiceText(e.target.value)}
-              rows={6}
+              placeholder={`Your spoken words in ${selectedLang?.name} will appear here live... or type directly`}
+              value={voiceText + (interimText ? (voiceText ? " " : "") + interimText : "")}
+              onChange={e => {
+                setVoiceText(e.target.value);
+                extractSymptomsFromText(e.target.value);
+              }}
+              rows={5}
             />
-            {voiceText && (
-              <div className="transcript-pill">
-                <Volume2 size={11} /> AI Transcribed &middot; {selectedLang?.name}
-              </div>
-            )}
+            <div className="transcript-actions-bar">
+              {voiceText && (
+                <div className="transcript-actions-left">
+                  <button
+                    className={"tts-btn" + (isSpeakingTTS ? " speaking" : "")}
+                    onClick={() => playTTS(voiceText)}
+                    title="Read aloud transcript"
+                  >
+                    {isSpeakingTTS ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                    {isSpeakingTTS ? "Stop Reading" : "Read Aloud"}
+                  </button>
+                  <button className="clear-text-btn" onClick={clearVoiceText} title="Clear transcript">
+                    <X size={12} /> Clear
+                  </button>
+                </div>
+              )}
+              {(voiceText || isListening) && (
+                <div className="transcript-pill">
+                  <Volume2 size={11} /> {isListening ? "Live Transcribing" : "AI Transcribed"} &middot; {selectedLang?.name}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
