@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://web-zeta-six-91.vercel.app/sitemap.xml

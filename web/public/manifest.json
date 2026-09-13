@@ -1,0 +1,21 @@
+{
+  "name": "MediKiosk",
+  "short_name": "MediKiosk",
+  "description": "AI-powered patient check-in & doctor triage platform for Smart India Healthcare",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#0E7C66",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "health", "productivity"],
+  "lang": "en-IN",
+  "dir": "ltr"
+}

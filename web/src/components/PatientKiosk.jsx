@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   HeartPulse, Globe, User, FileText, ShieldCheck, CheckCircle2,
   ArrowRight, ArrowLeft, Mic, MicOff, Volume2, Activity,
-  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw
+  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw, Send, UserRound
 } from "lucide-react";
 import "./PatientKiosk.css";
 
@@ -106,9 +106,127 @@ export default function PatientKiosk({ onExit }) {
   const [tokenNumber, setTokenNumber] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
+  // New Chat & AYUSH states
+  const [systemMode, setSystemMode] = useState("allopathy"); 
+  const [chatHistory, setChatHistory] = useState([
+    { sender: "ai", text: "What symptoms are you experiencing today? You can type or use the mic." }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [followUpStage, setFollowUpStage] = useState(0);
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [activeBranch, setActiveBranch] = useState(null);
+  
+  useEffect(() => {
+    setChatHistory(prev => {
+      if (prev.length === 1 && prev[0].sender === "ai") {
+         return [{ sender: "ai", text: lang === "hi" ? "आज आपको क्या लक्षण महसूस हो रहे हैं? आप टाइप कर सकते हैं या माइक का उपयोग कर सकते हैं।" : "What symptoms are you experiencing today? You can type or use the mic." }];
+      }
+      return prev;
+    });
+  }, [lang]);
+  
+  const chatBottomRef = useRef(null);
   const recognitionRef = useRef(null);
-  const isListeningRef = useRef(false);  // source-of-truth flag to avoid stale-closure bugs
-  const simulIntervalRef = useRef(null);  // for cleanup of fallback simulation
+  const isListeningRef = useRef(false);
+  const simulIntervalRef = useRef(null);
+  
+  // Refs for state accessed inside closures (Web Speech API)
+  const chatHistoryRef = useRef(chatHistory);
+  useEffect(() => { chatHistoryRef.current = chatHistory; }, [chatHistory]);
+  
+  const interimTextRef = useRef("");
+  const voiceTextRef = useRef("");
+  useEffect(() => { interimTextRef.current = interimText; }, [interimText]);
+  useEffect(() => { voiceTextRef.current = voiceText; }, [voiceText]);
+  const followUpStageRef = useRef(followUpStage);
+  useEffect(() => { followUpStageRef.current = followUpStage; }, [followUpStage]);
+  const activeBranchRef = useRef(activeBranch);
+  useEffect(() => { activeBranchRef.current = activeBranch; }, [activeBranch]);
+
+  useEffect(() => {
+    if (chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, interimText, isAiTyping]);
+
+  const handleSendChat = (text = chatInput) => {
+    if (!text.trim()) return;
+    const msgText = text.trim();
+    
+    setChatHistory(prev => [...prev, { sender: "user", text: msgText }]);
+    setChatInput("");
+    extractSymptomsFromText(msgText);
+    
+    setIsAiTyping(true);
+
+    setTimeout(() => {
+      let aiResponse = "";
+      const historyText = chatHistoryRef.current.map(m => m.text).join(" ") + " " + msgText;
+      const lower = historyText.toLowerCase();
+
+      // Intelligent Symptom Tree Logic
+      let currentBranch = activeBranchRef.current;
+      if (!currentBranch) {
+        if (lower.includes("headache") || lower.includes("head pain") || lower.includes("सिरदर्द") || lower.includes("सर दर्द") || lower.includes("माथा")) currentBranch = "headache";
+        else if (lower.includes("stomach") || lower.includes("belly") || lower.includes("pain in abdomen") || lower.includes("पेट") || lower.includes("पेट दर्द")) currentBranch = "stomach";
+        else if (lower.includes("fever") || lower.includes("temperature") || lower.includes("बुखार") || lower.includes("तापमान")) currentBranch = "fever";
+        else if (lower.includes("cough") || lower.includes("खांसी") || lower.includes("कफ")) currentBranch = "cough";
+        else if (lower.includes("chest") || lower.includes("heart") || lower.includes("breath") || lower.includes("छाती") || lower.includes("सीने") || lower.includes("सांस")) currentBranch = "chest";
+        else currentBranch = "general";
+        setActiveBranch(currentBranch);
+      }
+
+      const SYMPTOM_TREE_EN = {
+        headache: ["Is the pain localized to one side of your head, or all over?", "Are you experiencing any sensitivity to light, nausea, or blurry vision?"],
+        stomach: ["Is the pain sharp or dull, and does it get worse after eating?", "Have you had any vomiting, diarrhea, or unusual bowel movements recently?"],
+        fever: ["Have you checked your exact temperature recently? How high is it?", "Are you experiencing any body aches, shivering chills, or sweating?"],
+        cough: ["Is it a dry cough, or are you coughing up phlegm? If so, what color is it?", "Are you experiencing any shortness of breath or wheezing sound when you breathe?"],
+        chest: ["Does the chest pain radiate to your left arm, neck, or jaw?", "Do you feel any heavy tightness, sweating, or severe difficulty breathing?"],
+        general: ["Can you describe exactly when these symptoms first started?", "Are the symptoms constant, or do they come and go throughout the day?"]
+      };
+
+      const SYMPTOM_TREE_HI = {
+        headache: ["क्या दर्द सिर के एक हिस्से में है, या पूरे सिर में?", "क्या आपको रोशनी से परेशानी, मतली या धुंधलापन महसूस हो रहा है?"],
+        stomach: ["क्या दर्द तेज है या हल्का, और क्या यह खाने के बाद बढ़ जाता है?", "क्या आपको हाल ही में उल्टी, दस्त या मल त्याग में कोई असामान्य बदलाव महसूस हुआ है?"],
+        fever: ["क्या आपने हाल ही में अपना तापमान मापा है? यह कितना है?", "क्या आपको शरीर में दर्द, ठंड लगना या पसीना आ रहा है?"],
+        cough: ["क्या यह सूखी खांसी है, या बलगम आ रहा है? यदि हां, तो उसका रंग कैसा है?", "क्या आपको सांस लेने में तकलीफ या सीटी बजने जैसी आवाज़ आ रही है?"],
+        chest: ["क्या सीने का दर्द आपके बाएं हाथ, गर्दन या जबड़े तक फैल रहा है?", "क्या आपको भारीपन, पसीना या सांस लेने में गंभीर कठिनाई महसूस हो रही है?"],
+        general: ["क्या आप बता सकते हैं कि ये लक्षण पहली बार कब शुरू हुए?", "क्या ये लक्षण लगातार बने रहते हैं, या दिन भर में आते-जाते रहते हैं?"]
+      };
+
+      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
+
+      if (followUpStageRef.current === 0) {
+        aiResponse = tree[currentBranch][0];
+        setFollowUpStage(1);
+      } else if (followUpStageRef.current === 1) {
+        if (systemMode === "ayush") {
+          aiResponse = lang === "hi" 
+            ? "आपके आयुर्वेदिक निदान के लिए, आपकी पाचन शक्ति और भूख कैसी है? क्या भोजन के बाद भारीपन या हल्कापन महसूस होता है?" 
+            : "To help with your Ayurvedic assessment, how is your digestion and appetite usually? Do you feel heavy or light after meals?";
+          setFollowUpStage(2);
+        } else {
+          aiResponse = tree[currentBranch][1];
+          setFollowUpStage(3);
+        }
+      } else if (followUpStageRef.current === 2 && systemMode === "ayush") {
+         aiResponse = lang === "hi"
+            ? "अंत में, आप अपने शरीर की बनावट, वजन और सामान्य स्वभाव का वर्णन कैसे करेंगे? (इससे आपकी प्रकृति जानने में मदद मिलती है)"
+            : "Lastly, how would you describe your body frame, natural body weight, and general temperament? (This helps determine your Prakriti)";
+         setFollowUpStage(3);
+      } else {
+         aiResponse = lang === "hi"
+            ? "विस्तृत जानकारी के लिए धन्यवाद। मैंने इसे डॉक्टर के लिए संकलित कर लिया है। अब आप अपना सारांश देखने के लिए 'Continue' पर क्लिक कर सकते हैं।"
+            : "Thank you for the detailed information. I have compiled this for the doctor. You can now click Continue to review your summary.";
+      }
+      
+      setIsAiTyping(false);
+      if (aiResponse) {
+        setChatHistory(prev => [...prev, { sender: "ai", text: aiResponse }]);
+        if (!speechError) playTTS(aiResponse);
+      }
+    }, 1800);
+  };
 
   const selectedLang = LANGUAGES.find(l => l.code === lang);
 
@@ -175,14 +293,11 @@ export default function PatientKiosk({ onExit }) {
       } else {
         clearInterval(simulIntervalRef.current);
         simulIntervalRef.current = null;
-        setVoiceText(prev => {
-          const updated = (prev ? prev.trim() + " " : "") + phrase;
-          extractSymptomsFromText(updated);
-          return updated;
-        });
-        setInterimText("");
         isListeningRef.current = false;
         setIsListening(false);
+        setInterimText("");
+        setVoiceText("");
+        handleSendChat(phrase);
       }
     }, 80);
   };
@@ -255,7 +370,6 @@ export default function PatientKiosk({ onExit }) {
           // Auto-run simulation after short delay
           setTimeout(() => runSimulatedVoiceInput(currentLang), 300);
         } else if (event.error === 'no-speech') {
-          // Ignore no-speech — just clear interim, stay ready
           setInterimText("");
           isListeningRef.current = false;
           setIsListening(false);
@@ -266,12 +380,11 @@ export default function PatientKiosk({ onExit }) {
       };
 
       recognition.onend = () => {
-        // Only flip state if we haven't been explicitly stopped
         if (isListeningRef.current) {
+          // If ended unexpectedly
           isListeningRef.current = false;
+          setIsListening(false);
         }
-        setIsListening(false);
-        setInterimText("");
       };
 
       recognitionRef.current = recognition;
@@ -287,18 +400,26 @@ export default function PatientKiosk({ onExit }) {
 
   const stopListening = () => {
     isListeningRef.current = false;
-    // Stop real recognition
+    
+    // Capture the text we have right now using the refs
+    const finalSpoken = (voiceTextRef.current + " " + interimTextRef.current).trim();
+
     if (recognitionRef.current) {
       try { recognitionRef.current.stop(); } catch (e) {}
       recognitionRef.current = null;
     }
-    // Stop simulation
     if (simulIntervalRef.current) {
       clearInterval(simulIntervalRef.current);
       simulIntervalRef.current = null;
     }
+    
     setIsListening(false);
     setInterimText("");
+    setVoiceText("");
+    
+    if (finalSpoken) {
+      handleSendChat(finalSpoken);
+    }
   };
 
   const toggleVoice = () => {
@@ -339,7 +460,7 @@ export default function PatientKiosk({ onExit }) {
     if (step === 1) return !!lang;
     if (step === 2) return form.name && form.age && form.gender && form.phone;
     if (step === 3) return consents.dataShare && consents.aiAnalysis && consents.digital;
-    if (step === 4) return symptoms.length > 0 || voiceText.trim();
+    if (step === 4) return chatHistory.length > 1;
     return true;
   };
 
@@ -459,15 +580,24 @@ export default function PatientKiosk({ onExit }) {
       <div className="kiosk-step-header">
         <div className="step-icon-wrap"><Activity size={26} /></div>
         <h2>Clinical Assessment</h2>
-        <p>Select your symptoms or describe your condition using voice in <strong>{selectedLang?.name}</strong>.</p>
+        <p>Chat with our AI assistant in <strong>{selectedLang?.name}</strong> to detail your condition.</p>
       </div>
+      
+      <div className="system-toggle-wrap">
+        <div className="system-toggle">
+          <button className={"sys-btn " + (systemMode === 'allopathy' ? 'active' : '')} onClick={() => setSystemMode('allopathy')}>Allopathy (Standard)</button>
+          <button className={"sys-btn " + (systemMode === 'ayush' ? 'active ayush' : '')} onClick={() => setSystemMode('ayush')}>AYUSH (Ayurveda)</button>
+        </div>
+      </div>
+
       <div className="assessment-grid">
         <div className="assessment-pane">
-          <div className="pane-label">Quick Symptom Selection</div>
+          <div className="pane-label">Detected Symptoms & Keywords</div>
           <div className="symptom-chips">
             {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
               const isSelected = symptoms.includes(id);
               const isAuto = autoExtracted.includes(id);
+              if (!isSelected && !isAuto) return null;
               return (
                 <button
                   key={id}
@@ -476,118 +606,123 @@ export default function PatientKiosk({ onExit }) {
                 >
                   {label}
                   {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
-                  {isSelected && <Check size={11} className="chip-check" />}
+                  {(isSelected || isAuto) && <Check size={11} className="chip-check" />}
                 </button>
               );
             })}
-          </div>
-          {symptoms.length > 0 && (
-            <div className="selected-count">
-              <AlertCircle size={13} /> {symptoms.length} symptom{symptoms.length > 1 ? "s" : ""} selected
-              {autoExtracted.length > 0 && (
-                <span className="auto-detect-count-tag">
-                  <Sparkles size={11} /> {autoExtracted.length} auto-extracted from voice
-                </span>
-              )}
-            </div>
-          )}
-          <div className="duration-label-row"><Clock size={13} /> Duration of symptoms</div>
-          <div className="duration-chips">
-            {["Today","2-3 Days","Past Week","1-4 Weeks","Over a Month"].map(d => (
-              <button key={d} className={"dur-chip" + (form.visitReason === d ? " selected" : "")} onClick={() => setForm({...form, visitReason: d})}>{d}</button>
-            ))}
+            {symptoms.length === 0 && autoExtracted.length === 0 && (
+              <span style={{ fontSize: '0.8rem', color: '#94A3A3' }}>No keywords detected yet. Describe your symptoms.</span>
+            )}
           </div>
         </div>
 
         <div className="assessment-pane">
           <div className="pane-label-row">
-            <span className="pane-label">Voice Symptom Input ({selectedLang?.native})</span>
+            <span className="pane-label">AI Conversation ({selectedLang?.native})</span>
             <span className="lang-active-badge">
               <Globe size={11} /> {selectedLang?.speechCode}
             </span>
           </div>
 
-          <button type="button" className={"voice-record-btn" + (isListening ? " listening" : "")} onClick={toggleVoice}>
-            <div className="voice-btn-inner">
-              {isListening ? (
-                <>
-                  <div className="mic-pulse-rings"><span /><span /><span /></div>
-                  <MicOff size={22} className="mic-listening-icon" />
-                  <span className="mic-status-text">Listening in {selectedLang?.name}... Tap to stop</span>
-                </>
-              ) : (
-                <>
-                  <Mic size={22} />
-                  <span className="mic-status-text">Tap mic &amp; speak your symptoms</span>
-                  <span className="mic-subtext">Works in Hindi, English &amp; 6 more languages</span>
-                </>
-              )}
-            </div>
-            {isListening && (
-              <div className="soundwave">
-                {[...Array(11)].map((_, i) => (
-                  <span key={i} className="sw-bar" style={{ animationDelay: (i * 0.07) + "s" }} />
-                ))}
+          <div className="chat-interface">
+            {chatHistory.map((msg, idx) => (
+              <div key={idx} className={"chat-message " + msg.sender}>
+                <div className="chat-avatar">
+                  {msg.sender === 'ai' ? <Sparkles size={16} /> : <UserRound size={16} />}
+                </div>
+                <div className="chat-bubble">
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            
+            {isListening && interimText && (
+              <div className="chat-message user">
+                <div className="chat-avatar"><UserRound size={16} /></div>
+                <div className="chat-bubble" style={{ opacity: 0.7 }}>
+                  {interimText} <span className="interim-blink" />
+                </div>
               </div>
             )}
-          </button>
-
+            
+            
+            {isAiTyping && (
+              <div className="chat-message ai">
+                <div className="chat-avatar"><Sparkles size={16} /></div>
+                <div className="typing-indicator">
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                </div>
+              </div>
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+          
           {speechError && (
             <div className="speech-error-banner">
               <AlertCircle size={13} /> {speechError}
             </div>
           )}
 
-          <div className="voice-transcript-area">
-            {/* Live interim speech shown as a separate overlay so controlled input isn't blocked */}
-            {interimText && (
-              <div className="interim-text-preview">
-                <span className="interim-icon"><Mic size={11} /></span>
-                <span className="interim-words">{interimText}</span>
-                <span className="interim-blink" />
+          <div className="chat-input-area">
+            {isListening ? (
+              <div className="voice-note-active">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Mic className="mic-listening-icon" size={18} />
+                  <span>Recording Voice Note...</span>
+                </div>
+                <div className="vn-live-waves">
+                  {[...Array(6)].map((_, i) => (
+                    <span key={i} className="vn-bar" style={{ animationDelay: (i * 0.1) + "s" }} />
+                  ))}
+                </div>
               </div>
+            ) : (
+              <input 
+                type="text" 
+                placeholder={`Type your answer in ${selectedLang?.name}...`}
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendChat()}
+                disabled={isAiTyping}
+              />
             )}
-            <textarea
-              placeholder={`Your spoken words in ${selectedLang?.name} will appear here... or type directly`}
-              value={voiceText}
-              onChange={e => {
-                setVoiceText(e.target.value);
-                extractSymptomsFromText(e.target.value);
-              }}
-              rows={5}
-            />
-            <div className="transcript-actions-bar">
-              {voiceText && (
-                <div className="transcript-actions-left">
-                  <button
-                    type="button"
-                    className={"tts-btn" + (isSpeakingTTS ? " speaking" : "")}
-                    onClick={() => playTTS(voiceText)}
-                    title="Read aloud transcript"
-                  >
-                    {isSpeakingTTS ? <VolumeX size={12} /> : <Volume2 size={12} />}
-                    {isSpeakingTTS ? "Stop Reading" : "Read Aloud"}
-                  </button>
-                  <button type="button" className="clear-text-btn" onClick={clearVoiceText} title="Clear transcript">
-                    <X size={12} /> Clear
-                  </button>
-                </div>
-              )}
-              {(voiceText || isListening) && (
-                <div className="transcript-pill">
-                  <Volume2 size={11} /> {isListening ? "Live Transcribing" : "AI Transcribed"} &middot; {selectedLang?.name}
-                </div>
-              )}
-            </div>
+            
+            {!isListening && (
+              <button 
+                className="chat-mic-btn"
+                onClick={toggleVoice}
+                title="Record Voice Note"
+                disabled={isAiTyping}
+              >
+                <Mic size={20} />
+              </button>
+            )}
+            {isListening ? (
+              <button className="chat-send-btn" onClick={toggleVoice} style={{ background: '#DC2626' }}>
+                <Send size={18} />
+              </button>
+            ) : (
+              <button className="chat-send-btn" onClick={() => handleSendChat()} disabled={isAiTyping || !chatInput.trim()}>
+                <Send size={18} />
+              </button>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 
+
   const renderStep5 = () => {
     const selectedSymptomLabels = SYMPTOM_CHIPS.filter(s => symptoms.includes(s.id)).map(s => s.label);
-    const isEmergency = symptoms.includes("s1") || symptoms.includes("s4");
+
+    const historyText = chatHistory.map(m => m.text).join(" ").toLowerCase();
+    const isEmergency = historyText.includes("chest") || historyText.includes("breath");
+    const triageLevel = isEmergency ? "high" : (historyText.includes("fever") || historyText.includes("pain") ? "medium" : "low");
+    const triageLabel = triageLevel === "high" ? "ESI-2 Emergent" : (triageLevel === "medium" ? "ESI-3 Urgent" : "ESI-4 Non-Urgent");
+
     return (
       <div className="kiosk-step-content review-step">
         <div className="kiosk-step-header">
@@ -622,12 +757,14 @@ export default function PatientKiosk({ onExit }) {
                     </div>
                   </div>
                 </div>
-                {voiceText && (
-                  <div className="review-voice-box">
-                    <Volume2 size={12} />
-                    <p>"{voiceText}"</p>
+                <div className="review-voice-box">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <strong style={{ fontSize: '0.8rem' }}>AI Conversation Summary ({systemMode === 'ayush' ? 'AYUSH' : 'Allopathy'}):</strong>
+                    {chatHistory.filter(m => m.sender === 'user').map((msg, idx) => (
+                      <p key={idx} style={{ fontStyle: 'italic', margin: 0, fontSize: '0.8rem', color: '#4B5563' }}>- "{msg.text}"</p>
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
               <div className="review-card">
                 <div className="review-card-header"><ShieldCheck size={14} /> Consents Granted</div>
@@ -685,8 +822,8 @@ export default function PatientKiosk({ onExit }) {
               <div className="token-info-item">
                 <Activity size={15} />
                 <span>AI Triage</span>
-                <strong className={"triage-badge " + (isEmergency ? "emergency" : "urgent")}>
-                  {isEmergency ? "ESI-2 Emergent" : "ESI-3 Urgent"}
+                <strong className={"triage-badge " + (triageLevel === 'high' ? "emergency" : (triageLevel === 'medium' ? "urgent" : ""))}>
+                  {triageLabel}
                 </strong>
               </div>
             </div>
