@@ -26,8 +26,22 @@ const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [patients, setPatients] = useState(() => {
     const saved = localStorage.getItem('app_patients');
-    return saved ? JSON.parse(saved) : INITIAL_PATIENTS;
+    if (!saved) return INITIAL_PATIENTS;
+    try {
+      const parsed = JSON.parse(saved);
+      const existingIds = new Set(parsed.map(p => p.id));
+      const missing = INITIAL_PATIENTS.filter(p => !existingIds.has(p.id));
+      return [...parsed, ...missing];
+    } catch (e) {
+      return INITIAL_PATIENTS;
+    }
   });
+
+  const handleResetCohort = () => {
+    localStorage.removeItem('app_patients');
+    localStorage.setItem('app_patients', JSON.stringify(INITIAL_PATIENTS));
+    setPatients(INITIAL_PATIENTS);
+  };
 
   React.useEffect(() => {
     localStorage.setItem('app_patients', JSON.stringify(patients));
@@ -56,6 +70,7 @@ const DashboardLayout = () => {
               patients={patients}
               onSelectPatient={setSelectedPatient}
               onNewPatient={() => setShowNewPatientModal(true)}
+              onResetCohort={handleResetCohort}
             />
           )}
 

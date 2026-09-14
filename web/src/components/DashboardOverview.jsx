@@ -11,22 +11,22 @@ import {
   ChevronRight,
   Sparkles,
   FileText,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { PATIENT_VOLUME_DATA } from '../data/patientsData';
 import './DashboardOverview.css';
 
-const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
+const DashboardOverview = ({ patients, onSelectPatient, onNewPatient, onResetCohort }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [recordsModalPatient, setRecordsModalPatient] = useState(null);
 
-  // Stats calculation
-  const totalCount = 24;
-  const waitingCount = patients.filter(p => p.status === 'Waiting').length + 2;
-  const inConsultCount = patients.filter(p => p.status === 'In consultation').length + 1;
-  const completedCount = 15;
-
+  // Dynamic stats calculation
+  const totalCount = patients.length;
+  const waitingCount = patients.filter(p => p.status === 'Waiting').length;
+  const inConsultCount = patients.filter(p => p.status === 'In consultation').length;
+  const completedCount = patients.filter(p => p.status === 'Completed').length;
   const urgentCount = patients.filter(p => p.flagged).length;
 
   // Filtered patients for bottom table
@@ -38,6 +38,8 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
 
     if (activeFilter === 'priority') return matchesSearch && p.flagged;
     if (activeFilter === 'waiting') return matchesSearch && p.status === 'Waiting';
+    if (activeFilter === 'in-consult') return matchesSearch && p.status === 'In consultation';
+    if (activeFilter === 'completed') return matchesSearch && p.status === 'Completed';
     return matchesSearch;
   });
 
@@ -271,7 +273,7 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
                 className={`dov-pill ${activeFilter === 'all' ? 'active' : ''}`}
                 onClick={() => setActiveFilter('all')}
               >
-                All
+                All ({totalCount})
               </button>
               <button
                 className={`dov-pill ${activeFilter === 'priority' ? 'active' : ''}`}
@@ -283,8 +285,31 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
                 className={`dov-pill ${activeFilter === 'waiting' ? 'active' : ''}`}
                 onClick={() => setActiveFilter('waiting')}
               >
-                Waiting
+                Waiting ({waitingCount})
               </button>
+              <button
+                className={`dov-pill ${activeFilter === 'in-consult' ? 'active' : ''}`}
+                onClick={() => setActiveFilter('in-consult')}
+              >
+                In Consult ({inConsultCount})
+              </button>
+              <button
+                className={`dov-pill ${activeFilter === 'completed' ? 'active' : ''}`}
+                onClick={() => setActiveFilter('completed')}
+              >
+                Completed ({completedCount})
+              </button>
+              {onResetCohort && (
+                <button
+                  className="dov-pill"
+                  onClick={onResetCohort}
+                  title="Reload complete demonstration cohort (9 patients)"
+                  style={{ background: '#f8fafc', color: '#0E7C66', borderColor: '#cbd5e1' }}
+                >
+                  <RefreshCw size={11} />
+                  <span>Reset Demo Cohort</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
