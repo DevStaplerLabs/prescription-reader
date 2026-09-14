@@ -313,7 +313,10 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
                         {patient.name.split(' ').map(n=>n[0]).join('')}
                       </div>
                       <div>
-                        <div className="dov-patient-name">{patient.name}</div>
+                        <div className="dov-patient-name">
+                          {patient.name}
+                          {patient.tokenNumber && <span style={{ marginLeft: '8px', fontSize: '11px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{patient.tokenNumber}</span>}
+                        </div>
                         <div className="dov-patient-cc">{patient.chiefComplaint}</div>
                       </div>
                     </div>

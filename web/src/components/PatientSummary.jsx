@@ -85,6 +85,12 @@ const PatientSummaryModal = ({ patient, onClose }) => {
                 <span>{patient.age} yrs · {patient.gender}</span>
                 <span className="ps-meta-dot">·</span>
                 <span>Check-in: <span className="ps-time">{patient.checkInTime}</span></span>
+                {patient.tokenNumber && (
+                  <>
+                    <span className="ps-meta-dot">·</span>
+                    <span style={{ background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px' }}>Token: {patient.tokenNumber}</span>
+                  </>
+                )}
               </div>
             </div>
             {patient.flagged && (

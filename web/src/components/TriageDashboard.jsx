@@ -190,7 +190,10 @@ const PatientCard = ({ patient, isSelected, onClick }) => {
         {/* Main content */}
         <div className="tq-content">
           <div className="tq-row-top">
-            <div className="tq-name">{patient.name}</div>
+            <div className="tq-name">
+               {patient.name}
+               {patient.tokenNumber && <span style={{ marginLeft: '6px', fontSize: '10px', background: '#e2e8f0', color: '#475569', padding: '2px 4px', borderRadius: '4px' }}>{patient.tokenNumber}</span>}
+            </div>
             <div className="tq-wait">
               <Clock size={11} strokeWidth={2} />
               <span className="tq-wait-val">{patient.waitMins}m</span>

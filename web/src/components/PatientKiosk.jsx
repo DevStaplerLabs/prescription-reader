@@ -800,6 +800,7 @@ export default function PatientKiosk({ onExit }) {
     const newPatient = {
       id: 'P0' + Math.floor(10 + Math.random() * 90),
       caseId: 'CS-2026-' + Math.floor(1000 + Math.random() * 9000),
+      tokenNumber: tokenNumber,
       name: form.name || 'Anonymous Patient',
       abhaId: form.abhaId || '-',
       age: form.age || 30,
