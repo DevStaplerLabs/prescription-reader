@@ -483,7 +483,7 @@ export default function PatientKiosk({ onExit }) {
   const [submitted, setSubmitted] = useState(false);
 
   // New Chat & AYUSH states
-  const [systemMode, setSystemMode] = useState("allopathy"); 
+  const [systemMode, setSystemMode] = useState("ayush"); 
   const [chatHistory, setChatHistory] = useState([
     { sender: "ai", text: "What symptoms are you experiencing today? You can type or use the mic." }
   ]);
@@ -1516,8 +1516,7 @@ const renderStep5 = () => (
       
       <div className="system-toggle-wrap">
         <div className="system-toggle">
-          <button className={"sys-btn " + (systemMode === 'allopathy' ? 'active' : '')} onClick={() => setSystemMode('allopathy')}>Allopathy (Standard)</button>
-          <button className={"sys-btn " + (systemMode === 'ayush' ? 'active ayush' : '')} onClick={() => setSystemMode('ayush')}>AYUSH (Ayurveda)</button>
+          <button className="sys-btn active ayush" style={{ cursor: "default" }}>AYUSH (Ayurveda)</button>
         </div>
       </div>
 
@@ -1854,7 +1853,7 @@ const renderStep5 = () => (
                 </div>
                 <div className="review-voice-box">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                    <strong style={{ fontSize: '0.8rem' }}>AI Conversation Summary ({systemMode === 'ayush' ? 'AYUSH' : 'Allopathy'}):</strong>
+                    <strong style={{ fontSize: '0.8rem' }}>AI Conversation Summary (AYUSH):</strong>
                     {chatHistory.filter(m => m.sender === 'user').map((msg, idx) => (
                       <p key={idx} style={{ fontStyle: 'italic', margin: 0, fontSize: '0.8rem', color: '#4B5563' }}>- "{msg.text}"</p>
                     ))}
