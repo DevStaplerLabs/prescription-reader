@@ -241,7 +241,7 @@ export default function PatientKiosk({ onExit }) {
     if (step === 4 && chatHistoryRef.current.length === 1 && followUpStageRef.current === 0) {
       const timer = setTimeout(() => {
         playTTS(chatHistoryRef.current[0].text);
-      }, 800);
+      }, 50); // Reduced delay for faster TTS
       return () => clearTimeout(timer);
     }
   }, [step]);
