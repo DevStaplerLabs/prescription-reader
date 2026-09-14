@@ -112,7 +112,8 @@ export default function PatientKiosk({ onExit }) {
     { sender: "ai", text: "What symptoms are you experiencing today? You can type or use the mic." }
   ]);
   const [chatInput, setChatInput] = useState("");
-  const [followUpStage, setFollowUpStage] = useState(0);
+  const [questionQueue, setQuestionQueue] = useState([]);
+  const [askedSymptoms, setAskedSymptoms] = useState([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [activeBranch, setActiveBranch] = useState(null);
   
@@ -138,10 +139,14 @@ export default function PatientKiosk({ onExit }) {
   const voiceTextRef = useRef("");
   useEffect(() => { interimTextRef.current = interimText; }, [interimText]);
   useEffect(() => { voiceTextRef.current = voiceText; }, [voiceText]);
-  const followUpStageRef = useRef(followUpStage);
-  useEffect(() => { followUpStageRef.current = followUpStage; }, [followUpStage]);
+  const questionQueueRef = useRef(questionQueue);
+  useEffect(() => { questionQueueRef.current = questionQueue; }, [questionQueue]);
+  const askedSymptomsRef = useRef(askedSymptoms);
+  useEffect(() => { askedSymptomsRef.current = askedSymptoms; }, [askedSymptoms]);
   const activeBranchRef = useRef(activeBranch);
   useEffect(() => { activeBranchRef.current = activeBranch; }, [activeBranch]);
+  const systemModeRef = useRef(systemMode);
+  useEffect(() => { systemModeRef.current = systemMode; }, [systemMode]);
 
   useEffect(() => {
     if (chatBottomRef.current) {
@@ -165,42 +170,9 @@ export default function PatientKiosk({ onExit }) {
       const lower = historyText.toLowerCase();
       const lowerMsg = msgText.toLowerCase();
 
-      // Dynamic Symptom Tree Logic - update if new symptom detected in LATEST message
-      let newBranch = null;
-      if (lowerMsg.includes("chest") || lowerMsg.includes("heart") || lowerMsg.includes("breath") || lowerMsg.includes("छाती") || lowerMsg.includes("सीने") || lowerMsg.includes("सांस")) newBranch = "chest";
-      else if (lowerMsg.includes("headache") || lowerMsg.includes("head pain") || lowerMsg.includes("सिरदर्द") || lowerMsg.includes("सर दर्द") || lowerMsg.includes("माथा")) newBranch = "headache";
-      else if (lowerMsg.includes("stomach") || lowerMsg.includes("belly") || lowerMsg.includes("pain in abdomen") || lowerMsg.includes("पेट") || lowerMsg.includes("पेट दर्द")) newBranch = "stomach";
-      else if (lowerMsg.includes("fever") || lowerMsg.includes("temperature") || lowerMsg.includes("बुखार") || lowerMsg.includes("तापमान")) newBranch = "fever";
-      else if (lowerMsg.includes("cough") || lowerMsg.includes("खांसी") || lowerMsg.includes("कफ")) newBranch = "cough";
+      // Ensure base queue is initialized
+      let currentQueue = [...questionQueueRef.current];
       
-      if (newBranch && newBranch !== activeBranchRef.current) {
-         setActiveBranch(newBranch);
-         // If they mention a new symptom, we reset the follow-up stage to ask about it
-      }
-      
-      const currentBranch = newBranch || activeBranchRef.current || "general";
-      if (!activeBranchRef.current && !newBranch) {
-         setActiveBranch("general");
-      }
-
-      const SYMPTOM_TREE_EN = {
-        headache: ["Is the pain localized to one side of your head, or all over?", "Are you experiencing any sensitivity to light, nausea, or blurry vision?"],
-        stomach: ["Is the pain sharp or dull, and does it get worse after eating?", "Have you had any vomiting, diarrhea, or unusual bowel movements recently?"],
-        fever: ["Have you checked your exact temperature recently? How high is it?", "Are you experiencing any body aches, shivering chills, or sweating?"],
-        cough: ["Is it a dry cough, or are you coughing up phlegm? If so, what color is it?", "Are you experiencing any shortness of breath or wheezing sound when you breathe?"],
-        chest: ["Does the chest pain radiate to your left arm, neck, or jaw?", "Do you feel any heavy tightness, sweating, or severe difficulty breathing?"],
-        general: ["Can you describe exactly when these symptoms first started?", "Are the symptoms constant, or do they come and go throughout the day?"]
-      };
-
-      const SYMPTOM_TREE_HI = {
-        headache: ["क्या दर्द सिर के एक हिस्से में है, या पूरे सिर में?", "क्या आपको रोशनी से परेशानी, मतली या धुंधलापन महसूस हो रहा है?"],
-        stomach: ["क्या दर्द तेज है या हल्का, और क्या यह खाने के बाद बढ़ जाता है?", "क्या आपको हाल ही में उल्टी, दस्त या मल त्याग में कोई असामान्य बदलाव महसूस हुआ है?"],
-        fever: ["क्या आपने हाल ही में अपना तापमान मापा है? यह कितना है?", "क्या आपको शरीर में दर्द, ठंड लगना या पसीना आ रहा है?"],
-        cough: ["क्या यह सूखी खांसी है, या बलगम आ रहा है? यदि हां, तो उसका रंग कैसा है?", "क्या आपको सांस लेने में तकलीफ या सीटी बजने जैसी आवाज़ आ रही है?"],
-        chest: ["क्या सीने का दर्द आपके बाएं हाथ, गर्दन या जबड़े तक फैल रहा है?", "क्या आपको भारीपन, पसीना या सांस लेने में गंभीर कठिनाई महसूस हो रही है?"],
-        general: ["क्या आप बता सकते हैं कि ये लक्षण पहली बार कब शुरू हुए?", "क्या ये लक्षण लगातार बने रहते हैं, या दिन भर में आते-जाते रहते हैं?"]
-      };
-
       const COMMON_QUESTIONS_EN = [
         "How exactly long have you been feeling these symptoms?",
         "What medicines have you taken earlier for this, or have you consulted any other doctor?",
@@ -225,32 +197,90 @@ export default function PatientKiosk({ onExit }) {
         "अंत में, आप अपने शरीर की बनावट, वजन और सामान्य स्वभाव का वर्णन कैसे करेंगे? (इससे आपकी प्रकृति जानने में मदद मिलती है)"
       ];
 
-      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
       const commonQ = lang === "hi" ? COMMON_QUESTIONS_HI : COMMON_QUESTIONS_EN;
       const ayushQ = lang === "hi" ? AYUSH_QUESTIONS_HI : AYUSH_QUESTIONS_EN;
 
-      let currentStage = (newBranch && newBranch !== activeBranchRef.current) ? 0 : followUpStageRef.current;
+      if (currentQueue.length === 0 && chatHistoryRef.current.length <= 2) {
+         // Initialize standard queue if empty and it's the first response
+         currentQueue = [
+            commonQ[0], 
+            commonQ[1], 
+            systemModeRef.current === "ayush" ? ayushQ[0] : commonQ[2], 
+            systemModeRef.current === "ayush" ? ayushQ[1] : commonQ[3]
+         ];
+      }
 
-      if (currentStage === 0) {
-        aiResponse = tree[currentBranch][0];
-      } else if (currentStage === 1) {
-        aiResponse = tree[currentBranch][1];
-      } else if (currentStage === 2) {
-        aiResponse = commonQ[0];
-      } else if (currentStage === 3) {
-        aiResponse = commonQ[1];
-      } else if (currentStage === 4) {
-        aiResponse = systemMode === "ayush" ? ayushQ[0] : commonQ[2];
-      } else if (currentStage === 5) {
-        aiResponse = systemMode === "ayush" ? ayushQ[1] : commonQ[3];
+      // 1. Detect any new symptoms in the latest message
+      const SYMPTOM_MAP = [
+        { id: "chest", kw: ["chest", "heart", "breath", "छाती", "सीने", "सांस"] },
+        { id: "headache", kw: ["headache", "head pain", "सिरदर्द", "सर दर्द", "माथा"] },
+        { id: "stomach", kw: ["stomach", "belly", "pain in abdomen", "पेट", "पेट दर्द"] },
+        { id: "fever", kw: ["fever", "temperature", "बुखार", "तापमान"] },
+        { id: "cough", kw: ["cough", "खांसी", "कफ"] },
+      ];
+
+      let detectedSymptoms = [...askedSymptomsRef.current];
+      let newlyDetected = [];
+
+      SYMPTOM_MAP.forEach(sym => {
+        if (!detectedSymptoms.includes(sym.id)) {
+           if (sym.kw.some(k => lowerMsg.includes(k))) {
+              newlyDetected.push(sym.id);
+              detectedSymptoms.push(sym.id);
+           }
+        }
+      });
+      
+      // If we found NO symptoms in latest message but it's the very first message, detect from general history
+      if (newlyDetected.length === 0 && chatHistoryRef.current.length <= 2) {
+         SYMPTOM_MAP.forEach(sym => {
+            if (!detectedSymptoms.includes(sym.id)) {
+               if (sym.kw.some(k => lower.includes(k))) {
+                  newlyDetected.push(sym.id);
+                  detectedSymptoms.push(sym.id);
+               }
+            }
+         });
+      }
+
+      setAskedSymptoms(detectedSymptoms);
+
+      const SYMPTOM_TREE_EN = {
+        headache: ["Is the pain localized to one side of your head, or all over?", "Are you experiencing any sensitivity to light, nausea, or blurry vision?"],
+        stomach: ["Is the pain sharp or dull, and does it get worse after eating?", "Have you had any vomiting, diarrhea, or unusual bowel movements recently?"],
+        fever: ["Have you checked your exact temperature recently? How high is it?", "Are you experiencing any body aches, shivering chills, or sweating?"],
+        cough: ["Is it a dry cough, or are you coughing up phlegm? If so, what color is it?", "Are you experiencing any shortness of breath or wheezing sound when you breathe?"],
+        chest: ["Does the chest pain radiate to your left arm, neck, or jaw?", "Do you feel any heavy tightness, sweating, or severe difficulty breathing?"]
+      };
+
+      const SYMPTOM_TREE_HI = {
+        headache: ["क्या दर्द सिर के एक हिस्से में है, या पूरे सिर में?", "क्या आपको रोशनी से परेशानी, मतली या धुंधलापन महसूस हो रहा है?"],
+        stomach: ["क्या दर्द तेज है या हल्का, और क्या यह खाने के बाद बढ़ जाता है?", "क्या आपको हाल ही में उल्टी, दस्त या मल त्याग में कोई असामान्य बदलाव महसूस हुआ है?"],
+        fever: ["क्या आपने हाल ही में अपना तापमान मापा है? यह कितना है?", "क्या आपको शरीर में दर्द, ठंड लगना या पसीना आ रहा है?"],
+        cough: ["क्या यह सूखी खांसी है, या बलगम आ रहा है? यदि हां, तो उसका रंग कैसा है?", "क्या आपको सांस लेने में तकलीफ या सीटी बजने जैसी आवाज़ आ रही है?"],
+        chest: ["क्या सीने का दर्द आपके बाएं हाथ, गर्दन या जबड़े तक फैल रहा है?", "क्या आपको भारीपन, पसीना या सांस लेने में गंभीर कठिनाई महसूस हो रही है?"]
+      };
+      
+      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
+
+      // Add specific questions to the FRONT of the queue for newly detected symptoms
+      newlyDetected.reverse().forEach(symId => {
+         if (tree[symId]) {
+            currentQueue.unshift(tree[symId][1]);
+            currentQueue.unshift(tree[symId][0]);
+         }
+      });
+
+      // 2. Pop the next question
+      if (currentQueue.length > 0) {
+         aiResponse = currentQueue.shift();
       } else {
          aiResponse = lang === "hi"
             ? "विस्तृत जानकारी के लिए धन्यवाद। मैंने इसे डॉक्टर के लिए संकलित कर लिया है। अब आप अपना सारांश देखने के लिए 'Continue' पर क्लिक कर सकते हैं।"
             : "Thank you for the detailed information. I have compiled this for the doctor. You can now click Continue to review your summary.";
       }
-      
-      setFollowUpStage(currentStage + 1);
-      
+
+      setQuestionQueue(currentQueue);
       setIsAiTyping(false);
       if (aiResponse) {
         setChatHistory(prev => [...prev, { sender: "ai", text: aiResponse }]);
@@ -269,7 +299,7 @@ export default function PatientKiosk({ onExit }) {
 
   // Read aloud the initial greeting when user enters the chat screen
   useEffect(() => {
-    if (step === 4 && chatHistoryRef.current.length === 1 && followUpStageRef.current === 0) {
+    if (step === 4 && chatHistoryRef.current.length === 1) {
       playTTS(chatHistoryRef.current[0].text);
     }
   }, [step]);

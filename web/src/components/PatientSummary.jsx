@@ -37,10 +37,19 @@ const AyushBar = ({ vata, pitta, kapha }) => (
 // ─── MAIN FANCY MODAL COMPONENT ──────────────────────────────────────────────
 const PatientSummaryModal = ({ patient, onClose }) => {
   const [visible, setVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Local state for editable fields
+  const [aiSummary, setAiSummary] = useState("");
+  const [clinicalFrame, setClinicalFrame] = useState("");
 
   useEffect(() => {
     setVisible(true);
-  }, [patient?.id]);
+    if (patient) {
+       setAiSummary(patient.aiSummary || "");
+       setClinicalFrame(patient.clinicalFrame || "");
+    }
+  }, [patient]);
 
   if (!patient) return null;
 
@@ -123,7 +132,7 @@ const PatientSummaryModal = ({ patient, onClose }) => {
             <p className="ps-ai-text">{patient.aiSummary}</p>
           </div>
 
-          {/* Chief Complaint */}
+          {/* Chief Complaint & Assessment */}
           <div className="ps-card ps-cc-card">
             <div className="ps-card-label">Chief Complaint & Voice Input</div>
             <div className="ps-quote-block">
@@ -131,8 +140,17 @@ const PatientSummaryModal = ({ patient, onClose }) => {
               <p className="ps-patient-words">{patient.patientWords?.replace(/^"|"$/g, '')}</p>
             </div>
             <div className="ps-clinical-frame">
-              <span className="ps-frame-label">Clinical interpretation & ESI Level</span>
-              <p className="ps-frame-text">{patient.clinicalFrame}</p>
+              <span className="ps-frame-label">AI Clinical Assessment & Plan</span>
+              {isEditing ? (
+                 <textarea 
+                    className="ps-edit-textarea" 
+                    value={clinicalFrame} 
+                    onChange={(e) => setClinicalFrame(e.target.value)} 
+                    rows={3}
+                 />
+              ) : (
+                 <p className="ps-frame-text">{clinicalFrame}</p>
+              )}
             </div>
           </div>
 
@@ -197,15 +215,18 @@ const PatientSummaryModal = ({ patient, onClose }) => {
           )}
 
           {/* Action Row */}
-          <div className="ps-actions">
-            <button className="ps-btn-primary" onClick={onClose}>
-              <Check size={15} strokeWidth={2.5} /> Approve & Start Consultation
-            </button>
-            <button className="ps-btn-outline" onClick={onClose}>
-              <Info size={15} strokeWidth={2} /> Request Additional Tests
-            </button>
-            <button className="ps-btn-text" onClick={onClose}>
-              <ClipboardEdit size={14} strokeWidth={1.8} /> Edit Prescription
+          <div className="ps-actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {isEditing ? (
+               <button className="ps-btn-primary" onClick={() => setIsEditing(false)}>
+                 <Check size={15} strokeWidth={2.5} /> Save Notes
+               </button>
+            ) : (
+               <button className="ps-btn-outline" onClick={() => setIsEditing(true)}>
+                 <ClipboardEdit size={15} strokeWidth={2} /> Edit Chart Notes
+               </button>
+            )}
+            <button className="ps-btn-primary" onClick={onClose} style={{ marginLeft: isEditing ? '0' : 'auto' }}>
+              <CheckCircle2 size={15} strokeWidth={2.5} /> Finalize Chart & Start Consultation
             </button>
           </div>
         </div>

@@ -529,3 +529,25 @@
   font-weight: 500;
   cursor: pointer;
 }
+
+.ps-edit-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #13B897;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #334155;
+  resize: vertical;
+  line-height: 1.5;
+  outline: none;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.ps-edit-textarea:focus {
+  background: #fff;
+  border-color: #0E7C66;
+  box-shadow: 0 0 0 3px rgba(19, 184, 151, 0.15);
+}
