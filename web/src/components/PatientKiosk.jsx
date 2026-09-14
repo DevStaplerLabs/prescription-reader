@@ -510,7 +510,7 @@ export default function PatientKiosk({ onExit }) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(textToSpeak || voiceText);
     utterance.lang = selectedLang?.speechCode || "en-IN";
-    utterance.rate = 0.95;
+    utterance.rate = 1.2;
 
     utterance.onstart = () => setIsSpeakingTTS(true);
     utterance.onend = () => setIsSpeakingTTS(false);
