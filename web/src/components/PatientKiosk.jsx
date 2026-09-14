@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   HeartPulse, Globe, User, FileText, ShieldCheck, CheckCircle2,
   ArrowRight, ArrowLeft, Mic, MicOff, Volume2, Activity,
-  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw, Send, UserRound
+  AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw, Send, UserRound,
+  Camera, FileUp
 } from "lucide-react";
 import "./PatientKiosk.css";
 
@@ -41,8 +42,9 @@ const STEPS = [
   { id: 1, title: "Language", icon: Globe },
   { id: 2, title: "Your Details", icon: User },
   { id: 3, title: "Consent", icon: ShieldCheck },
-  { id: 4, title: "Assessment", icon: Activity },
-  { id: 5, title: "Review", icon: CheckCircle2 },
+  { id: 4, title: "Records", icon: FileText },
+  { id: 5, title: "Assessment", icon: Activity },
+  { id: 6, title: "Review", icon: CheckCircle2 },
 ];
 
 // Keyword symptom detection map for English & Hindi
@@ -103,6 +105,8 @@ export default function PatientKiosk({ onExit }) {
   const [autoExtracted, setAutoExtracted] = useState([]);
   const [speechError, setSpeechError] = useState("");
   const [isSpeakingTTS, setIsSpeakingTTS] = useState(false);
+  const [docUploadState, setDocUploadState] = useState('idle'); // idle, scanning, complete
+  const [extractedDocData, setExtractedDocData] = useState(null);
   const [tokenNumber, setTokenNumber] = useState(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -292,7 +296,7 @@ export default function PatientKiosk({ onExit }) {
   const selectedLang = LANGUAGES.find(l => l.code === lang);
 
   useEffect(() => {
-    if (step === 5 && !tokenNumber) {
+    if (step === 6 && !tokenNumber) {
       setTokenNumber("B-" + (Math.floor(40 + Math.random() * 20)));
     }
   }, [step]);
@@ -536,7 +540,8 @@ export default function PatientKiosk({ onExit }) {
     if (step === 1) return !!lang;
     if (step === 2) return form.name && form.age && form.gender && form.phone;
     if (step === 3) return consents.dataShare && consents.aiAnalysis && consents.digital;
-    if (step === 4) return chatHistory.length > 1;
+    if (step === 4) return true;
+    if (step === 5) return chatHistory.length > 1;
     return true;
   };
 
@@ -651,7 +656,79 @@ export default function PatientKiosk({ onExit }) {
     </div>
   );
 
+  
+  const handleSimulateScan = () => {
+    setDocUploadState('scanning');
+    setTimeout(() => {
+      setExtractedDocData({
+        type: 'Blood Report (Recent)',
+        insights: ['Elevated HbA1c (7.2%)', 'High Fasting Glucose (140 mg/dL)']
+      });
+      setDocUploadState('complete');
+      // Inject insight into chat history for AI to reference
+      setChatHistory(prev => [
+        ...prev, 
+        { sender: "ai", text: "I see you've uploaded a recent blood report showing elevated HbA1c and glucose levels. Are you currently taking any medication for diabetes, or experiencing symptoms like increased thirst or fatigue?" }
+      ]);
+      setQuestionQueue(prev => ["How long have you had diabetes?", "Are you taking insulin?"]);
+    }, 2500);
+  };
+
   const renderStep4 = () => (
+    <div className="kiosk-step-content">
+      <div className="kiosk-step-header">
+        <div className="step-icon-wrap"><FileText size={26} /></div>
+        <h2>Past Records (Optional)</h2>
+        <p>Upload or scan your previous prescriptions, lab reports, or discharge summaries for a better AI assessment.</p>
+      </div>
+
+      <div className="doc-upload-container">
+        {docUploadState === 'idle' && (
+          <div className="doc-upload-grid">
+            <div className="doc-upload-card" onClick={handleSimulateScan}>
+              <div className="doc-icon"><FileUp size={32} /></div>
+              <h4>Upload PDF / Image</h4>
+              <p>Drag and drop or browse files</p>
+            </div>
+            <div className="doc-upload-card" onClick={handleSimulateScan}>
+              <div className="doc-icon"><Camera size={32} /></div>
+              <h4>Webcam Scan</h4>
+              <p>Hold your physical document to the camera</p>
+            </div>
+          </div>
+        )}
+
+        {docUploadState === 'scanning' && (
+          <div className="doc-scanning-box">
+            <div className="scanner-line"></div>
+            <FileText size={48} className="scanning-icon" />
+            <h3>AI Analyzing Document...</h3>
+            <p>Extracting clinical data and vital metrics</p>
+          </div>
+        )}
+
+        {docUploadState === 'complete' && extractedDocData && (
+          <div className="doc-success-box">
+            <div className="doc-success-header">
+              <CheckCircle2 size={24} color="#059669" />
+              <h3>Extraction Complete</h3>
+            </div>
+            <div className="doc-extracted-data">
+              <div className="extracted-type">Document: <strong>{extractedDocData.type}</strong></div>
+              <div className="extracted-list">
+                {extractedDocData.insights.map((ins, i) => (
+                  <div key={i} className="extracted-item"><Check size={14} /> {ins}</div>
+                ))}
+              </div>
+            </div>
+            <p className="doc-helper-text">These insights have been added to your profile. The AI will consider them in your assessment.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+const renderStep5 = () => (
     <div className="kiosk-step-content">
       <div className="kiosk-step-header">
         <div className="step-icon-wrap"><Activity size={26} /></div>
@@ -830,7 +907,7 @@ export default function PatientKiosk({ onExit }) {
     setSubmitted(true);
   };
 
-  const renderStep5 = () => {
+  const renderStep6 = () => {
     const selectedSymptomLabels = SYMPTOM_CHIPS.filter(s => symptoms.includes(s.id)).map(s => s.label);
 
     const historyText = chatHistory.map(m => m.text).join(" ").toLowerCase();
@@ -961,6 +1038,7 @@ export default function PatientKiosk({ onExit }) {
       case 3: return renderStep3();
       case 4: return renderStep4();
       case 5: return renderStep5();
+      case 6: return renderStep6();
       default: return null;
     }
   };
@@ -1008,7 +1086,7 @@ export default function PatientKiosk({ onExit }) {
           <button className="kiosk-back-btn" onClick={() => step > 1 ? setStep(s => s-1) : onExit()}>
             <ArrowLeft size={15} /> {step === 1 ? "Back to Home" : "Back"}
           </button>
-          {step < 5 && (
+          {step < 6 && (
             <button
               className={"kiosk-next-btn" + (!canProceed() ? " disabled" : "")}
               disabled={!canProceed()}
