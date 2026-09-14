@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import "./PatientKiosk.css";
 import { requestAiTriageQuestions } from "../services/aiTriageService";
+import { generateSpokenPrescriptionSummary } from "../services/prescriptionVoiceSummary";
 
 const LANGUAGES = [
   { code: "en", speechCode: "en-IN", name: "English", native: "English", flag: "EN", region: "International" },
@@ -506,6 +507,9 @@ export default function PatientKiosk({ onExit }) {
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
   const simulIntervalRef = useRef(null);
+  const activeTtsTimeoutRef = useRef(null);
+  const activeUtteranceRef = useRef(null);
+  const ttsQueueRef = useRef([]);
   
   // Refs for state accessed inside closures (Web Speech API)
   const chatHistoryRef = useRef(chatHistory);
@@ -533,6 +537,7 @@ export default function PatientKiosk({ onExit }) {
   }, [chatHistory, interimText, isAiTyping]);
 
   const handleSendChat = async (text = chatInput) => {
+    stopTTS();
     if (!text.trim()) return;
     const msgText = text.trim();
     
@@ -628,10 +633,7 @@ export default function PatientKiosk({ onExit }) {
   useEffect(() => {
     // If not on step 5 (e.g. on Step 4 Records/Upload Docs or Step 3 Consent), immediately silence any audio
     if (step !== 5) {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      setIsSpeakingTTS(false);
+      stopTTS();
       return;
     }
 
@@ -644,7 +646,7 @@ export default function PatientKiosk({ onExit }) {
             playTTS(firstMessage, true);
           }
         }
-      }, 400);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [step]);
@@ -669,9 +671,7 @@ export default function PatientKiosk({ onExit }) {
         clearInterval(simulIntervalRef.current);
         simulIntervalRef.current = null;
       }
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      stopTTS();
     };
   }, []);
 
@@ -845,6 +845,7 @@ export default function PatientKiosk({ onExit }) {
   };
 
   const toggleVoice = () => {
+    stopTTS();
     if (isListeningRef.current) {
       stopListening();
     } else {
@@ -852,37 +853,116 @@ export default function PatientKiosk({ onExit }) {
     }
   };
 
+  const stopTTS = () => {
+    if (activeTtsTimeoutRef.current) {
+      clearTimeout(activeTtsTimeoutRef.current);
+      activeTtsTimeoutRef.current = null;
+    }
+    ttsQueueRef.current = [];
+    activeUtteranceRef.current = null;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+    setIsSpeakingTTS(false);
+  };
+
+  /**
+   * Fast, natural, sentence-level streaming TTS.
+   * Splits text into sentences, immediately dispatches the 1st sentence (< 40ms onset),
+   * and queues subsequent sentences with a natural 70ms conversational cadence.
+   */
   const playTTS = (textToSpeak, forceSpeak = false) => {
-    if (!('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     if (isSpeakingTTS && !forceSpeak) {
-      window.speechSynthesis.cancel();
-      setIsSpeakingTTS(false);
+      stopTTS();
       return;
     }
 
-    window.speechSynthesis.cancel();
-    setIsSpeakingTTS(false);
+    stopTTS();
 
-    // Timeout prevents Chromium SpeechSynthesisUtterance race conditions
-    setTimeout(() => {
+    const fullText = (textToSpeak || voiceText || "").trim();
+    if (!fullText) return;
+
+    // Sentence splitter keeping punctuation
+    const rawSentences = fullText
+      .replace(/([.!?।])\s+/g, "$1|SPLIT|")
+      .split("|SPLIT|")
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    const sentences = rawSentences.length > 0 ? rawSentences : [fullText];
+    ttsQueueRef.current = [...sentences];
+
+    const targetLangCode = selectedLang?.speechCode || (lang === 'hi' ? "hi-IN" : "en-IN");
+    
+    // Choose the best regional or natural voice
+    const availableVoices = window.speechSynthesis.getVoices() || [];
+    let bestVoice = null;
+
+    if (lang === 'hi') {
+      bestVoice = availableVoices.find(v => v.lang?.startsWith('hi') && (v.name?.includes('Natural') || v.name?.includes('Google') || v.name?.includes('हिन्दी')))
+        || availableVoices.find(v => v.lang?.startsWith('hi'));
+    } else {
+      bestVoice = availableVoices.find(v => (v.lang === 'en-IN' || v.lang === 'en-GB' || v.lang === 'en-US') && (v.name?.includes('Natural') || v.name?.includes('Female') || v.name?.includes('Google')))
+        || availableVoices.find(v => v.lang?.startsWith('en'));
+    }
+
+    let sentenceIdx = 0;
+
+    const speakNextSentence = () => {
+      if (sentenceIdx >= sentences.length) {
+        setIsSpeakingTTS(false);
+        activeUtteranceRef.current = null;
+        return;
+      }
+
+      const currentSentence = sentences[sentenceIdx];
+      sentenceIdx++;
+
       try {
-        const text = textToSpeak || voiceText;
-        if (!text) return;
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = selectedLang?.speechCode || "en-IN";
-        utterance.rate = 1.1;
+        const utterance = new SpeechSynthesisUtterance(currentSentence);
+        if (bestVoice) utterance.voice = bestVoice;
+        utterance.lang = targetLangCode;
+        utterance.rate = lang === 'hi' ? 1.02 : 1.05;
+        utterance.pitch = 1.0;
 
-        utterance.onstart = () => setIsSpeakingTTS(true);
-        utterance.onend = () => setIsSpeakingTTS(false);
-        utterance.onerror = () => setIsSpeakingTTS(false);
+        utterance.onstart = () => {
+          setIsSpeakingTTS(true);
+        };
 
+        utterance.onend = () => {
+          if (sentenceIdx < sentences.length) {
+            // Conversational pause between sentences (70ms)
+            activeTtsTimeoutRef.current = setTimeout(speakNextSentence, 70);
+          } else {
+            setIsSpeakingTTS(false);
+            activeUtteranceRef.current = null;
+          }
+        };
+
+        utterance.onerror = (e) => {
+          console.warn("TTS sentence playback error:", e);
+          if (sentenceIdx < sentences.length) {
+            speakNextSentence();
+          } else {
+            setIsSpeakingTTS(false);
+            activeUtteranceRef.current = null;
+          }
+        };
+
+        activeUtteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
       } catch (err) {
-        console.warn("TTS speak error:", err);
+        console.warn("SpeechSynthesis error:", err);
         setIsSpeakingTTS(false);
       }
-    }, 60);
+    };
+
+    // Immediate start on sentence 0
+    speakNextSentence();
   };
 
   const clearVoiceText = () => {
@@ -1044,13 +1124,19 @@ export default function PatientKiosk({ onExit }) {
       setExtractedDocData(enrichedDoc);
       setDocUploadState('complete');
 
-      const medNames = rx.medicines ? rx.medicines.map(m => m.name).join(', ') : '';
+      const naturalGreeting = generateSpokenPrescriptionSummary(enrichedDoc, {
+        lang,
+        hasPriorSymptoms: symptoms.length > 0 || autoExtracted.length > 0 || selectedDiseases.length > 0,
+        priorSymptomNames: [
+          ...symptoms.map(s => KEYWORD_SYMPTOM_MAP.find(k => k.id === s)?.keywords?.[0] || s),
+          ...identifiedConditions
+        ].filter(Boolean)
+      });
+
       setChatHistory([
         { 
           sender: "ai", 
-          text: lang === "hi" 
-            ? `नमस्ते! मैंने आपके डॉक्टर (${rx.doctor}) द्वारा लिखे गए पर्चे (तारीख: ${durationInfo.prescriptionDateFormatted}) से दवाएं (${medNames}) डिजिटाइज़ कर ली हैं। आप यह दवा ${durationInfo.takingDurationText.toLowerCase()} ले रहे हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
-            : `Hello! I have digitized your prescription from ${rx.doctor} (Date: ${durationInfo.prescriptionDateFormatted}) including ${medNames}. I note that: ${durationInfo.takingDurationText}. What symptoms are you experiencing today, and are you currently taking these regularly?` 
+          text: naturalGreeting
         }
       ]);
     }, 1500);
@@ -1196,13 +1282,19 @@ export default function PatientKiosk({ onExit }) {
       setExtractedDocData(extracted);
       setDocUploadState('complete');
 
-      const medNames = extracted.medicines.map(m => m.name).join(', ');
+      const naturalGreeting = generateSpokenPrescriptionSummary(extracted, {
+        lang,
+        hasPriorSymptoms: symptoms.length > 0 || autoExtracted.length > 0 || selectedDiseases.length > 0,
+        priorSymptomNames: [
+          ...symptoms.map(s => KEYWORD_SYMPTOM_MAP.find(k => k.id === s)?.keywords?.[0] || s),
+          ...identifiedConditions
+        ].filter(Boolean)
+      });
+
       setChatHistory([
         { 
           sender: "ai", 
-          text: lang === "hi" 
-            ? `नमस्ते! मैंने आपके डॉक्टर (${extracted.doctor}) द्वारा लिखे गए पर्चे (तारीख: ${extracted.date}) से दवाएं (${medNames}) पढ़ ली हैं। आप यह दवा ${durationInfo.takingDurationText.toLowerCase()} ले रहे हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
-            : `Hello! I have digitized your prescription from ${extracted.doctor} (Date: ${extracted.date}) including ${medNames}. I note that: ${durationInfo.takingDurationText}. What symptoms are you experiencing today?` 
+          text: naturalGreeting
         }
       ]);
     } catch (err) {
@@ -1319,17 +1411,42 @@ export default function PatientKiosk({ onExit }) {
 
         {docUploadState === 'complete' && extractedDocData && (
           <div className="doc-success-box">
-            <div className="doc-success-header" style={{ justifyContent: 'space-between' }}>
+            <div className="doc-success-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <CheckCircle2 size={24} color="#059669" />
                 <h3>Prescription Digitized Successfully</h3>
               </div>
-              <button 
-                onClick={() => setDocUploadState('idle')}
-                style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 10px', fontSize: '0.78rem', cursor: 'pointer', color: '#475569' }}
-              >
-                Scan Another
-              </button>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button 
+                  type="button"
+                  className={"rx-voice-play-btn " + (isSpeakingTTS ? "playing" : "")}
+                  onClick={() => {
+                    if (isSpeakingTTS) {
+                      stopTTS();
+                    } else {
+                      const summary = generateSpokenPrescriptionSummary(extractedDocData, {
+                        lang,
+                        hasPriorSymptoms: symptoms.length > 0 || autoExtracted.length > 0 || selectedDiseases.length > 0,
+                        priorSymptomNames: [
+                          ...symptoms.map(s => KEYWORD_SYMPTOM_MAP.find(k => k.id === s)?.keywords?.[0] || s),
+                          ...identifiedConditions
+                        ].filter(Boolean)
+                      });
+                      playTTS(summary, true);
+                    }
+                  }}
+                  title="Listen to smart prescription voice summary"
+                >
+                  {isSpeakingTTS ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                  <span>{isSpeakingTTS ? "Stop Audio" : "Voice Summary"}</span>
+                </button>
+                <button 
+                  onClick={() => { stopTTS(); setDocUploadState('idle'); }}
+                  style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 12px', fontSize: '0.78rem', cursor: 'pointer', color: '#475569' }}
+                >
+                  Scan Another
+                </button>
+              </div>
             </div>
 
             <div className="rx-meta-row">
