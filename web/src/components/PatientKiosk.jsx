@@ -1058,8 +1058,8 @@ export default function PatientKiosk({ onExit }) {
     </div>
   );
 
-  
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const handleSimulateScan = (presetRx = null) => {
     setDocUploadState('scanning');
@@ -1106,6 +1106,7 @@ export default function PatientKiosk({ onExit }) {
 
   const handleCustomFileUpload = async (e) => {
     const file = e.target.files?.[0];
+    if (e.target) e.target.value = '';
     if (!file) return;
 
     setDocUploadState('scanning');
@@ -1279,6 +1280,14 @@ export default function PatientKiosk({ onExit }) {
           accept="image/*,.pdf" 
           onChange={handleCustomFileUpload} 
         />
+        <input 
+          type="file" 
+          ref={cameraInputRef} 
+          style={{ display: 'none' }} 
+          accept="image/*" 
+          capture="environment" 
+          onChange={handleCustomFileUpload} 
+        />
 
         {docUploadState === 'idle' && (
           <>
@@ -1286,19 +1295,19 @@ export default function PatientKiosk({ onExit }) {
               <div className="doc-upload-card" onClick={() => fileInputRef.current?.click()}>
                 <div className="doc-icon"><FileUp size={32} /></div>
                 <h4>Upload Handwritten Prescription</h4>
-                <p>Browse image or PDF file to extract medicines</p>
+                <p>Browse image or PDF from device to analyze via Gemini Vision 2.0</p>
               </div>
-              <div className="doc-upload-card" onClick={() => handleSimulateScan(SAMPLE_PRESCRIPTIONS[0])}>
+              <div className="doc-upload-card" onClick={() => (cameraInputRef.current || fileInputRef.current)?.click()}>
                 <div className="doc-icon"><Camera size={32} /></div>
                 <h4>Scan Physical Prescription</h4>
-                <p>AI OCR reads doctor handwriting automatically</p>
+                <p>Take photo with camera to read doctor handwriting via Gemini Vision 2.0</p>
               </div>
             </div>
 
             <div className="rx-sample-presets">
               <div className="rx-sample-presets-title">
-                <Sparkles size={13} color="#0E7C66" />
-                <span>Or Select Sample Handwritten Prescription to Test:</span>
+                <Sparkles size={13} color="#94a3b8" />
+                <span style={{ color: '#64748b', fontSize: '0.78rem' }}>Or test with pre-loaded demo prescription:</span>
               </div>
               <div className="rx-sample-grid">
                 {SAMPLE_PRESCRIPTIONS.map(rx => (
@@ -1309,8 +1318,8 @@ export default function PatientKiosk({ onExit }) {
                   >
                     <h5>{rx.title}</h5>
                     <p>{rx.preview}</p>
-                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#0E7C66', fontWeight: 600 }}>
-                      ⚡ Click to Auto-Scan
+                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                      📋 Demo Sample
                     </div>
                   </div>
                 ))}
