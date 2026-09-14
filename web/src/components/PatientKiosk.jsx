@@ -19,7 +19,7 @@ const LANGUAGES = [
 ];
 
 
-export const DISEASE_CATEGORIES = [
+const DISEASE_CATEGORIES = [
   {
     category: "Cardiovascular & Thoracic",
     items: [
@@ -228,7 +228,7 @@ export const hasAffirmedKeyword = (text, kw) => {
   return false;
 };
 
-export const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases = []) => {
+const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases = []) => {
   const userText = chatHistory
     .filter(m => m.sender === 'user')
     .map(m => m.text.toLowerCase())
@@ -604,7 +604,7 @@ export default function PatientKiosk({ onExit }) {
       setIsAiTyping(false);
       if (aiResponse) {
         setChatHistory(prev => [...prev, { sender: "ai", text: aiResponse }]);
-        if (!speechError) playTTS(aiResponse);
+        if (!speechError) playTTS(aiResponse, true);
       }
     }, 1800);
   };
@@ -617,13 +617,28 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
-  // Read aloud the initial greeting when user enters the chat screen (Step 5: Assessment)
+  // Read aloud the initial greeting ONLY when user arrives on Step 5 (Assessment / Conversation)
   useEffect(() => {
-    if (step === 5 && chatHistoryRef.current.length === 1) {
-      playTTS(chatHistoryRef.current[0].text);
-    } else if (step !== 5 && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
+    // If not on step 5 (e.g. on Step 4 Records/Upload Docs or Step 3 Consent), immediately silence any audio
+    if (step !== 5) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
       setIsSpeakingTTS(false);
+      return;
+    }
+
+    // When explicitly arriving on Step 5: Clinical Assessment & Conversation
+    if (step === 5) {
+      const timer = setTimeout(() => {
+        if (chatHistoryRef.current && chatHistoryRef.current.length >= 1) {
+          const firstMessage = chatHistoryRef.current[0]?.text;
+          if (firstMessage) {
+            playTTS(firstMessage, true);
+          }
+        }
+      }, 400);
+      return () => clearTimeout(timer);
     }
   }, [step]);
 
@@ -830,25 +845,37 @@ export default function PatientKiosk({ onExit }) {
     }
   };
 
-  const playTTS = (textToSpeak) => {
+  const playTTS = (textToSpeak, forceSpeak = false) => {
     if (!('speechSynthesis' in window)) return;
 
-    if (isSpeakingTTS) {
+    if (isSpeakingTTS && !forceSpeak) {
       window.speechSynthesis.cancel();
       setIsSpeakingTTS(false);
       return;
     }
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(textToSpeak || voiceText);
-    utterance.lang = selectedLang?.speechCode || "en-IN";
-    utterance.rate = 1.2;
+    setIsSpeakingTTS(false);
 
-    utterance.onstart = () => setIsSpeakingTTS(true);
-    utterance.onend = () => setIsSpeakingTTS(false);
-    utterance.onerror = () => setIsSpeakingTTS(false);
+    // Timeout prevents Chromium SpeechSynthesisUtterance race conditions
+    setTimeout(() => {
+      try {
+        const text = textToSpeak || voiceText;
+        if (!text) return;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = selectedLang?.speechCode || "en-IN";
+        utterance.rate = 1.1;
 
-    window.speechSynthesis.speak(utterance);
+        utterance.onstart = () => setIsSpeakingTTS(true);
+        utterance.onend = () => setIsSpeakingTTS(false);
+        utterance.onerror = () => setIsSpeakingTTS(false);
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn("TTS speak error:", err);
+        setIsSpeakingTTS(false);
+      }
+    }, 60);
   };
 
   const clearVoiceText = () => {
