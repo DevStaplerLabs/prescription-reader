@@ -24,7 +24,14 @@ const KioskWrapper = () => {
 
 const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [patients, setPatients] = useState(INITIAL_PATIENTS);
+  const [patients, setPatients] = useState(() => {
+    const saved = localStorage.getItem('app_patients');
+    return saved ? JSON.parse(saved) : INITIAL_PATIENTS;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('app_patients', JSON.stringify(patients));
+  }, [patients]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatientModal, setShowNewPatientModal] = useState(false);
 

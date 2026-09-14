@@ -791,6 +791,47 @@ export default function PatientKiosk({ onExit }) {
   );
 
 
+  const handleFinalSubmit = () => {
+    const historyText = chatHistory.map(m => m.text).join(" ").toLowerCase();
+    const isEmergency = historyText.includes("chest") || historyText.includes("breath");
+    const triageLvl = isEmergency ? "high" : (historyText.includes("fever") || historyText.includes("pain") ? "medium" : "low");
+    const triageLabel = triageLvl === "high" ? "ESI-2 Emergent" : (triageLvl === "medium" ? "ESI-3 Urgent" : "ESI-4 Non-Urgent");
+
+    const newPatient = {
+      id: 'P0' + Math.floor(10 + Math.random() * 90),
+      caseId: 'CS-2026-' + Math.floor(1000 + Math.random() * 9000),
+      name: form.name || 'Anonymous Patient',
+      abhaId: form.abhaId || '-',
+      age: form.age || 30,
+      gender: form.gender || 'Unknown',
+      chiefComplaint: form.visitReason || 'General Checkup',
+      flagged: triageLvl === 'high',
+      flagReason: triageLvl === 'high' ? 'AI Triage Alert: ' + triageLabel : '',
+      status: 'Waiting',
+      triageLevel: triageLabel,
+      department: form.department || 'General Medicine',
+      checkInTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      waitMins: 0,
+      avatarColor: 'teal',
+      aiSummary: "AI HPI Notes:\n" + chatHistory.filter(m => m.sender === 'user').map(m => "- " + m.text).join('\n'),
+      aiConfidence: 85,
+      patientWords: '"' + chatHistory.filter(m => m.sender === 'user').map(m => m.text).join(' ') + '"',
+      clinicalFrame: 'Automated AI Triage Intake via Kiosk. Pending physician review.',
+      vitals: { bp: '120/80 mmHg', hr: '80 bpm', spo2: '98%', temp: '98.6 °F' },
+      ayush: systemMode === 'ayush' ? {
+        prakriti: { vata: 33, pitta: 33, kapha: 34 },
+        vikriti: { vata: 33, pitta: 33, kapha: 34 }
+      } : null
+    };
+
+    const saved = localStorage.getItem('app_patients');
+    const patientsList = saved ? JSON.parse(saved) : []; 
+    patientsList.unshift(newPatient);
+    localStorage.setItem('app_patients', JSON.stringify(patientsList));
+
+    setSubmitted(true);
+  };
+
   const renderStep5 = () => {
     const selectedSymptomLabels = SYMPTOM_CHIPS.filter(s => symptoms.includes(s.id)).map(s => s.label);
 
@@ -870,7 +911,7 @@ export default function PatientKiosk({ onExit }) {
                 </div>
               </div>
             </div>
-            <button className="kiosk-submit-btn" onClick={() => setSubmitted(true)}>
+            <button className="kiosk-submit-btn" onClick={handleFinalSubmit}>
               <CheckCircle2 size={18} /> Confirm &amp; Submit Check-In
             </button>
           </>
