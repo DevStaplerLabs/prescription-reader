@@ -329,6 +329,57 @@ const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases = []) =>
   };
 };
 
+const calculateMedicationDuration = (prescriptionDateStr) => {
+  if (!prescriptionDateStr) {
+    const todayFormatted = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return {
+      elapsedDays: 0,
+      takingDurationText: "Patient started taking this medicine today",
+      prescriptionDateFormatted: todayFormatted
+    };
+  }
+
+  const rxDate = new Date(prescriptionDateStr);
+  const now = new Date();
+
+  const formattedDate = !isNaN(rxDate.getTime()) 
+    ? rxDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    : prescriptionDateStr;
+
+  if (isNaN(rxDate.getTime())) {
+    return {
+      elapsedDays: 0,
+      takingDurationText: "Active prescription regimen",
+      prescriptionDateFormatted: formattedDate
+    };
+  }
+
+  const diffMs = now.getTime() - rxDate.getTime();
+  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+  let durationText = "";
+  if (diffDays === 0) {
+    durationText = "Patient started taking this medicine today";
+  } else if (diffDays === 1) {
+    durationText = "Patient is taking this medicine for 1 day";
+  } else if (diffDays < 30) {
+    durationText = `Patient is taking this medicine for ${diffDays} days`;
+  } else {
+    const months = Math.floor(diffDays / 30);
+    const remDays = diffDays % 30;
+    if (remDays === 0) {
+      durationText = `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''}`;
+    } else {
+      durationText = `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''} and ${remDays} day${remDays > 1 ? 's' : ''} (${diffDays} days total)`;
+    }
+  }
+
+  return {
+    elapsedDays: diffDays,
+    takingDurationText: durationText,
+    prescriptionDateFormatted: formattedDate
+  };
+};
 
 const SAMPLE_PRESCRIPTIONS = [
   {
@@ -336,6 +387,7 @@ const SAMPLE_PRESCRIPTIONS = [
     title: 'Gastroenterology Rx',
     doctor: 'Dr. A. K. Verma (MBBS, MD - Gastro)',
     date: '10/09/2026',
+    dateIso: '2026-09-10',
     type: 'Handwritten OPD Prescription (Digitized)',
     preview: 'Pantocid DSR, Mucaine Gel, Ganaton',
     medicines: [
@@ -352,7 +404,8 @@ const SAMPLE_PRESCRIPTIONS = [
     id: 'rx_cardiac',
     title: 'Cardiology Maintenance Rx',
     doctor: 'Dr. P. K. Singh (MBBS, MD - Cardiology)',
-    date: '08/09/2026',
+    date: '15/08/2026',
+    dateIso: '2026-08-15',
     type: 'Handwritten Cardiology Prescription (Digitized)',
     preview: 'Ecosprin 75, Telma 40, Rosuvas 10',
     medicines: [
@@ -370,6 +423,7 @@ const SAMPLE_PRESCRIPTIONS = [
     title: 'General Medicine Rx',
     doctor: 'Dr. Neha Gupta (MBBS, DNB - Medicine)',
     date: '12/09/2026',
+    dateIso: '2026-09-12',
     type: 'Handwritten OPD Prescription (Digitized)',
     preview: 'Augmentin 625, Dolo 650, Montair-LC',
     medicines: [
@@ -420,7 +474,8 @@ export default function PatientKiosk({ onExit }) {
   const [autoExtracted, setAutoExtracted] = useState([]);
   const [speechError, setSpeechError] = useState("");
   const [isSpeakingTTS, setIsSpeakingTTS] = useState(false);
-  const [docUploadState, setDocUploadState] = useState('idle'); // idle, scanning, complete
+  const [docUploadState, setDocUploadState] = useState('idle'); // idle, scanning, complete, error
+  const [uploadError, setUploadError] = useState("");
   const [extractedDocData, setExtractedDocData] = useState(null);
   const [tokenNumber, setTokenNumber] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -1008,21 +1063,45 @@ export default function PatientKiosk({ onExit }) {
 
   const handleSimulateScan = (presetRx = null) => {
     setDocUploadState('scanning');
+    setUploadError('');
     const rx = presetRx || SAMPLE_PRESCRIPTIONS[0];
+    const durationInfo = calculateMedicationDuration(rx.dateIso || '2026-09-10');
+
     setTimeout(() => {
-      setExtractedDocData(rx);
+      const enrichedMeds = (rx.medicines || []).map(m => ({
+        ...m,
+        prescriptionDate: durationInfo.prescriptionDateFormatted,
+        takingDurationText: durationInfo.takingDurationText,
+        elapsedDays: durationInfo.elapsedDays
+      }));
+
+      const enrichedDoc = {
+        ...rx,
+        date: durationInfo.prescriptionDateFormatted,
+        prescriptionDate: durationInfo.prescriptionDateFormatted,
+        prescriptionDateIso: rx.dateIso || '2026-09-10',
+        takingDurationText: durationInfo.takingDurationText,
+        elapsedDays: durationInfo.elapsedDays,
+        medicines: enrichedMeds,
+        insights: [
+          durationInfo.takingDurationText,
+          ...(rx.insights || [])
+        ]
+      };
+
+      setExtractedDocData(enrichedDoc);
       setDocUploadState('complete');
-      // Inject prescription context into chat history for AI to acknowledge in Step 5
+
       const medNames = rx.medicines ? rx.medicines.map(m => m.name).join(', ') : '';
       setChatHistory([
         { 
           sender: "ai", 
           text: lang === "hi" 
-            ? `नमस्ते! मैंने आपके डॉक्टर (${rx.doctor}) द्वारा लिखे गए पर्चे से दवाएं (${medNames}) डिजिटाइज़ कर ली हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
-            : `Hello! I have digitized your prescription from ${rx.doctor} including ${medNames}. What symptoms are you experiencing today, and are you currently taking these regularly?` 
+            ? `नमस्ते! मैंने आपके डॉक्टर (${rx.doctor}) द्वारा लिखे गए पर्चे (तारीख: ${durationInfo.prescriptionDateFormatted}) से दवाएं (${medNames}) डिजिटाइज़ कर ली हैं। आप यह दवा ${durationInfo.takingDurationText.toLowerCase()} ले रहे हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
+            : `Hello! I have digitized your prescription from ${rx.doctor} (Date: ${durationInfo.prescriptionDateFormatted}) including ${medNames}. I note that: ${durationInfo.takingDurationText}. What symptoms are you experiencing today, and are you currently taking these regularly?` 
         }
       ]);
-    }, 2000);
+    }, 1500);
   };
 
   const handleCustomFileUpload = async (e) => {
@@ -1030,15 +1109,15 @@ export default function PatientKiosk({ onExit }) {
     if (!file) return;
 
     setDocUploadState('scanning');
+    setUploadError('');
 
-    // Attempt real live parsing via Render backend (same as mobile app)
+    // Call live Render backend (same as mobile app) with 60s timeout
     try {
       const formData = new FormData();
       formData.append('image', file);
 
-      // 12s timeout controller
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const response = await fetch('https://prescription-reader-j3j9.onrender.com/api/prescriptions/parse', {
         method: 'POST',
@@ -1047,89 +1126,140 @@ export default function PatientKiosk({ onExit }) {
       });
       clearTimeout(timeoutId);
 
-      if (response.ok) {
-        const json = await response.json();
-        if (json.status === 'success' && json.data?.parsedData) {
-          const parsed = json.data.parsedData;
-          const backendMeds = parsed.medications || [];
-
-          const mappedMeds = backendMeds.map(m => {
-            const freq = m.frequency;
-            let freqStr = 'As directed';
-            if (freq && typeof freq === 'object') {
-              freqStr = `${freq.morning || 0}-${freq.afternoon || 0}-${freq.night || 0} (${m.mealInstruction ? m.mealInstruction + ' food' : 'routine'})`;
-            } else if (typeof freq === 'string') {
-              freqStr = freq;
-            }
-            const dur = m.duration;
-            let durStr = 'Ongoing';
-            if (dur && typeof dur === 'object') {
-              durStr = `${dur.value || ''} ${dur.unit || 'days'}`;
-            } else if (typeof dur === 'string') {
-              durStr = dur;
-            }
-            return {
-              name: m.drugName || m.name || 'Prescribed Medication',
-              dosage: m.dosage || 'Standard dose',
-              frequency: freqStr,
-              duration: durStr
-            };
-          });
-
-          const extracted = {
-            id: 'uploaded_' + Date.now(),
-            title: 'Uploaded Prescription: ' + file.name,
-            doctor: parsed.doctorName || parsed.clinicName || 'Dr. Consulted Physician (Gemini Vision)',
-            date: parsed.date ? new Date(parsed.date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'),
-            type: 'Handwritten Prescription (Backend Gemini Vision 2.0 AI)',
-            preview: mappedMeds.map(m => m.name).join(', ') || 'Extracted via Prescription Reader Backend',
-            medicines: mappedMeds.length > 0 ? mappedMeds : [
-              { name: 'Digitized Medication', dosage: 'Per Rx', frequency: 'As directed', duration: 'As needed' }
-            ],
-            insights: parsed.advice && parsed.advice.length > 0
-              ? parsed.advice
-              : [
-                  'Analyzed in real-time via Render Backend & Gemini Vision 2.0',
-                  `${mappedMeds.length} active medications verified`
-                ]
-          };
-
-          setExtractedDocData(extracted);
-          setDocUploadState('complete');
-
-          const medNames = extracted.medicines.map(m => m.name).join(', ');
-          setChatHistory([
-            { 
-              sender: "ai", 
-              text: lang === "hi" 
-                ? `नमस्ते! मैंने आपके डॉक्टर (${extracted.doctor}) द्वारा लिखे गए पर्चे से दवाएं (${medNames}) डिजिटाइज़ कर ली हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
-                : `Hello! I have digitized your prescription from ${extracted.doctor} including ${medNames}. What symptoms are you experiencing today, and are you currently taking these regularly?` 
-            }
-          ]);
-          return;
-        }
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
       }
-      throw new Error("Backend response error or empty data");
-    } catch (err) {
-      console.warn("Live backend call timed out or failed, utilizing accurate OCR engine:", err);
-      // Seamless fallback so presentation never breaks
-      handleSimulateScan({
-        id: 'custom_upload_' + Date.now(),
-        title: 'Uploaded Prescription: ' + file.name,
-        doctor: 'Dr. S. K. Sharma (MBBS, MD)',
-        date: new Date().toLocaleDateString('en-GB'),
-        type: 'Handwritten OPD Prescription (AI OCR Scanned)',
-        preview: 'Digitized from uploaded document: ' + file.name,
-        medicines: [
-          { name: 'Tab. Pantocid DSR', dosage: '40 mg', frequency: 'OD (Before Breakfast)', duration: '14 Days' },
-          { name: 'Tab. Telma 40', dosage: '40 mg', frequency: 'OD (Morning)', duration: '30 Days' },
-          { name: 'Syp. Mucaine Gel', dosage: '10 ml', frequency: 'TDS (Post Meals)', duration: '7 Days' }
-        ],
-        insights: [
-          'Prescription scanned and parsed via OCR Medical NER',
-          '3 active medications identified with 97.4% OCR confidence'
-        ]
+
+      const json = await response.json();
+      if (json.status !== 'success' || !json.data?.parsedData) {
+        throw new Error(json.message || "Could not parse prescription document");
+      }
+
+      const parsed = json.data.parsedData;
+      const backendMeds = parsed.medications || [];
+
+      if (backendMeds.length === 0) {
+        const reason = json.data.rawOcrText || parsed.rawNotes || "No readable medicine names detected in this image. Please upload a clear photo of your prescription.";
+        setUploadError(reason);
+        setDocUploadState('error');
+        return;
+      }
+
+      // Calculate prescription date and duration elapsed
+      const rawDate = parsed.date;
+      const durationInfo = calculateMedicationDuration(rawDate);
+
+      // Map to frontend structure replicating mobile/lib/core/services/api_service.dart
+      const mappedMeds = backendMeds.map(med => {
+        const drugName = med.drugName || med.name || 'Prescribed Medicine';
+        const form = med.form ? `${med.form}. ` : '';
+        const fullName = drugName.startsWith(form) ? drugName : `${form}${drugName}`.trim();
+        const dosage = med.dosage || 'Standard dose';
+
+        // Format frequency map like mobile app (e.g. 1-0-1)
+        const freq = med.frequency;
+        let freqStr = '1-0-1';
+        if (freq && typeof freq === 'object') {
+          freqStr = `${freq.morning ?? 0}-${freq.afternoon ?? 0}-${freq.night ?? 0}`;
+        } else if (typeof freq === 'string') {
+          freqStr = freq;
+        }
+
+        // Meal instruction formatting matching mobile app
+        const meal = (med.mealInstruction || '').toLowerCase();
+        let instruction = 'After food';
+        if (meal === 'before') {
+          instruction = 'Before food';
+        } else if (meal === 'with') {
+          instruction = 'With food';
+        } else if (meal) {
+          instruction = meal;
+        }
+
+        const fullFreqWithMeal = `${freqStr} (${instruction})`;
+
+        // Duration parsing matching mobile app
+        const dur = med.duration;
+        let durationStr = '5 Days';
+        let durationDays = 5;
+        if (dur && typeof dur === 'object') {
+          const val = parseInt(dur.value) || 1;
+          const unit = (dur.unit || 'days').toLowerCase();
+          if (unit.includes('week')) {
+            durationDays = val * 7;
+            durationStr = `${val} Week${val > 1 ? 's' : ''} (${durationDays} Days)`;
+          } else if (unit.includes('month')) {
+            durationDays = val * 30;
+            durationStr = `${val} Month${val > 1 ? 's' : ''} (${durationDays} Days)`;
+          } else {
+            durationDays = val;
+            durationStr = `${val} Day${val > 1 ? 's' : ''}`;
+          }
+        } else if (typeof dur === 'string' && dur.trim()) {
+          durationStr = dur;
+        }
+
+        return {
+          name: fullName,
+          dosage: dosage,
+          frequency: fullFreqWithMeal,
+          freqRaw: freqStr,
+          instruction: instruction,
+          duration: durationStr,
+          durationDays: durationDays,
+          specialInstructions: med.specialInstructions || null,
+          prescriptionDate: durationInfo.prescriptionDateFormatted,
+          takingDurationText: durationInfo.takingDurationText,
+          elapsedDays: durationInfo.elapsedDays
+        };
       });
+
+      const extracted = {
+        id: 'uploaded_' + Date.now(),
+        title: 'Uploaded Prescription: ' + file.name,
+        doctor: parsed.doctorName || parsed.clinicName || 'Consulting Physician (AI Verified)',
+        clinic: parsed.clinicName || 'Clinical OPD',
+        date: durationInfo.prescriptionDateFormatted,
+        prescriptionDate: durationInfo.prescriptionDateFormatted,
+        prescriptionDateIso: rawDate || new Date().toISOString().split('T')[0],
+        takingDurationText: durationInfo.takingDurationText,
+        elapsedDays: durationInfo.elapsedDays,
+        type: 'Handwritten Prescription (Backend Gemini Vision 2.0 AI)',
+        preview: mappedMeds.map(m => m.name).join(', '),
+        medicines: mappedMeds,
+        advice: (parsed.advice && parsed.advice.length > 0)
+          ? parsed.advice
+          : [
+              `Extracted ${mappedMeds.length} verified medications`,
+              durationInfo.takingDurationText
+            ],
+        insights: [
+          durationInfo.takingDurationText,
+          ...(parsed.advice || [])
+        ],
+        rawOcrText: json.data.rawOcrText || parsed.rawNotes || ''
+      };
+
+      setExtractedDocData(extracted);
+      setDocUploadState('complete');
+
+      const medNames = extracted.medicines.map(m => m.name).join(', ');
+      setChatHistory([
+        { 
+          sender: "ai", 
+          text: lang === "hi" 
+            ? `नमस्ते! मैंने आपके डॉक्टर (${extracted.doctor}) द्वारा लिखे गए पर्चे (तारीख: ${extracted.date}) से दवाएं (${medNames}) पढ़ ली हैं। आप यह दवा ${durationInfo.takingDurationText.toLowerCase()} ले रहे हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
+            : `Hello! I have digitized your prescription from ${extracted.doctor} (Date: ${extracted.date}) including ${medNames}. I note that: ${durationInfo.takingDurationText}. What symptoms are you experiencing today?` 
+        }
+      ]);
+    } catch (err) {
+      console.error("Prescription parsing error:", err);
+      setUploadError(
+        err.name === 'AbortError'
+          ? "Request timed out while analyzing the prescription. Please check your internet connection and try a clearer image."
+          : `Could not extract prescription details: ${err.message || 'Please try a clearer image'}`
+      );
+      setDocUploadState('error');
     }
   };
 
@@ -1193,8 +1323,36 @@ export default function PatientKiosk({ onExit }) {
           <div className="doc-scanning-box">
             <div className="scanner-line"></div>
             <FileText size={48} className="scanning-icon" />
-            <h3>AI OCR Reading Handwritten Prescription...</h3>
-            <p>Identifying medicine names, dosages, and prescribing physician</p>
+            <h3>Analyzing Prescription via Gemini Vision 2.0 AI...</h3>
+            <p>Reading doctor handwriting, active medicine names, dosages, frequency &amp; dates</p>
+          </div>
+        )}
+
+        {docUploadState === 'error' && (
+          <div className="doc-error-box" style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+            <div style={{ display: 'inline-flex', padding: '12px', borderRadius: '50%', background: '#ffe4e6', color: '#e11d48', marginBottom: '12px' }}>
+              <AlertCircle size={32} />
+            </div>
+            <h3 style={{ color: '#9f1239', margin: '0 0 8px 0', fontSize: '1.1rem' }}>Prescription Reading Notice</h3>
+            <p style={{ color: '#be123c', fontSize: '0.88rem', maxWidth: '460px', margin: '0 auto 16px auto', lineHeight: '1.4' }}>
+              {uploadError || "No legible medication details detected in this image. Please ensure the prescription photo is clear, well-lit, and unblurred."}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => { setDocUploadState('idle'); fileInputRef.current?.click(); }}
+                style={{ background: '#0E7C66', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 18px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FileUp size={16} /> Choose Clearer Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSimulateScan(SAMPLE_PRESCRIPTIONS[0])}
+                style={{ background: '#fff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '9px 16px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                Use Demonstration Rx
+              </button>
+            </div>
           </div>
         )}
 
@@ -1215,9 +1373,16 @@ export default function PatientKiosk({ onExit }) {
 
             <div className="rx-meta-row">
               <div><strong>Physician:</strong> {extractedDocData.doctor}</div>
-              <div><strong>Date:</strong> {extractedDocData.date}</div>
-              <div className="rx-meta-badge">97.8% AI OCR Match</div>
+              <div><strong>Prescription Date:</strong> {extractedDocData.date}</div>
+              <div className="rx-meta-badge">Gemini Vision 2.0 AI</div>
             </div>
+
+            {extractedDocData.takingDurationText && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', margin: '12px 0', fontSize: '0.86rem', color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} color="#16a34a" />
+                <span>⏱️ {extractedDocData.takingDurationText}</span>
+              </div>
+            )}
 
             {extractedDocData.medicines && (
               <table className="digitized-meds-table">
@@ -1238,7 +1403,9 @@ export default function PatientKiosk({ onExit }) {
                       </td>
                       <td>{m.dosage}</td>
                       <td>{m.frequency}</td>
-                      <td>{m.duration}</td>
+                      <td>
+                        <div>{m.duration}</div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1254,7 +1421,7 @@ export default function PatientKiosk({ onExit }) {
               </div>
             </div>
 
-            <p className="doc-helper-text">These medications have been attached to your report and will be sent directly to the doctor dashboard.</p>
+            <p className="doc-helper-text">These medications and duration tracking have been attached to your report and will be sent directly to the doctor dashboard.</p>
           </div>
         )}
       </div>
@@ -1511,14 +1678,24 @@ const renderStep5 = () => (
       pastRecords: extractedDocData ? {
         type: extractedDocData.type,
         doctor: extractedDocData.doctor,
+        clinic: extractedDocData.clinic,
         date: extractedDocData.date,
+        prescriptionDate: extractedDocData.date,
+        prescriptionDateIso: extractedDocData.prescriptionDateIso,
+        takingDurationText: extractedDocData.takingDurationText,
+        elapsedDays: extractedDocData.elapsedDays,
         medicines: extractedDocData.medicines,
         insights: extractedDocData.insights
       } : null,
       documents: extractedDocData ? {
         documentType: extractedDocData.type,
         documentDate: extractedDocData.date,
+        prescriptionDate: extractedDocData.date,
+        prescriptionDateIso: extractedDocData.prescriptionDateIso,
+        takingDurationText: extractedDocData.takingDurationText,
+        elapsedDays: extractedDocData.elapsedDays,
         prescribingDoctor: extractedDocData.doctor,
+        clinic: extractedDocData.clinic,
         medicines: extractedDocData.medicines,
         insights: extractedDocData.insights
       } : null,
@@ -1565,10 +1742,9 @@ const renderStep5 = () => (
               <div className="review-card">
                 <div className="review-card-header"><User size={14} /> Personal Details</div>
                 <div className="review-rows">
-                  <div className="review-row"><span>Name</span><strong>{form.name || "---"}</strong></div>
-                  <div className="review-row"><span>Age</span><strong>{form.age ? form.age + " yrs" : "---"}</strong></div>
-                  <div className="review-row"><span>Gender</span><strong>{form.gender || "---"}</strong></div>
-                  <div className="review-row"><span>Phone</span><strong>{form.phone || "---"}</strong></div>
+                  <div className="review-row"><span>Name</span><strong>{form.name || "-"}</strong></div>
+                  <div className="review-row"><span>Age / Gender</span><strong>{form.age ? form.age + " yrs" : "-"} · {form.gender || "-"}</strong></div>
+                  <div className="review-row"><span>Phone</span><strong>{form.phone || "-"}</strong></div>
                   {form.abhaId && <div className="review-row"><span>ABHA ID</span><strong>{form.abhaId}</strong></div>}
                 </div>
               </div>
@@ -1618,10 +1794,17 @@ const renderStep5 = () => (
                   <div className="review-card-header" style={{ justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Pill size={14} color="#0E7C66" />
-                      <span>Digitized Medications (From Uploaded Prescription)</span>
+                      <span>Digitized Prescription Medications</span>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{extractedDocData.doctor}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      {extractedDocData.doctor} · Prescribed: {extractedDocData.date}
+                    </span>
                   </div>
+                  {extractedDocData.takingDurationText && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 12px', margin: '8px 16px 0 16px', borderRadius: '6px', fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
+                      ⏱️ {extractedDocData.takingDurationText}
+                    </div>
+                  )}
                   <div style={{ padding: '10px 16px' }}>
                     <table className="digitized-meds-table">
                       <thead>

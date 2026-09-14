@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   CheckCircle2, Sparkles, FileText, Leaf, Check,
-  ClipboardEdit, Info, X, HeartPulse
+  ClipboardEdit, Info, X, HeartPulse, Clock
 } from 'lucide-react';
 import './PatientSummary.css';
 
@@ -53,7 +53,28 @@ const PatientSummaryModal = ({ patient, onClose }) => {
 
   if (!patient) return null;
 
-  const { documents: doc, ayush, vitals } = patient;
+  const doc = patient.documents || patient.pastRecords;
+  const { ayush, vitals } = patient;
+
+  const getTakingDuration = () => {
+    if (doc?.takingDurationText) return doc.takingDurationText;
+    if (patient.takingDurationText) return patient.takingDurationText;
+    const dStr = doc?.prescriptionDate || doc?.documentDate || doc?.date;
+    if (!dStr) return null;
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return null;
+    const diffDays = Math.max(0, Math.floor((new Date().getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
+    if (diffDays === 0) return "Patient started taking this medicine today";
+    if (diffDays === 1) return "Patient is taking this medicine for 1 day";
+    if (diffDays < 30) return `Patient is taking this medicine for ${diffDays} days`;
+    const months = Math.floor(diffDays / 30);
+    const remDays = diffDays % 30;
+    return remDays === 0 
+      ? `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''}`
+      : `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''} and ${remDays} day(s) (${diffDays} days total)`;
+  };
+  const durationBanner = getTakingDuration();
+  const rxDateDisplay = doc?.prescriptionDate || doc?.documentDate || doc?.date || 'Recent';
 
   return (
     <div className="psm-backdrop" onClick={onClose}>
@@ -163,19 +184,32 @@ const PatientSummaryModal = ({ patient, onClose }) => {
           {/* Extracted Prescriptions */}
           {doc && (
             <div className="ps-card">
-              <div className="ps-card-label">Extracted Prescription & Medications</div>
+              <div className="ps-card-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Extracted Prescription & Medications</span>
+                <span style={{ fontSize: '0.74rem', fontWeight: 600, color: '#0E7C66', textTransform: 'none' }}>
+                  Gemini Vision 2.0 Digitized
+                </span>
+              </div>
+
+              {durationBanner && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '9px 14px', margin: '10px 0 14px 0', fontSize: '0.84rem', color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={16} color="#16a34a" />
+                  <span>⏱️ {durationBanner}</span>
+                </div>
+              )}
+
               <div className="ps-doc-meta-row">
                 <div className="ps-doc-field">
                   <span className="ps-field-label">Prescribing Doctor</span>
-                  <span className="ps-field-val">{doc.prescribingDoctor}</span>
+                  <span className="ps-field-val">{doc.prescribingDoctor || doc.doctor || 'Attending Physician'}</span>
                 </div>
                 <div className="ps-doc-field">
                   <span className="ps-field-label">Document Type</span>
-                  <span className="ps-field-val">{doc.documentType}</span>
+                  <span className="ps-field-val">{doc.documentType || doc.type || 'Prescription'}</span>
                 </div>
                 <div className="ps-doc-field">
-                  <span className="ps-field-label">Date</span>
-                  <span className="ps-field-val ps-mono">{doc.documentDate}</span>
+                  <span className="ps-field-label">Prescription Date</span>
+                  <span className="ps-field-val ps-mono" style={{ color: '#0e7c66', fontWeight: 600 }}>{rxDateDisplay}</span>
                 </div>
               </div>
 
@@ -188,7 +222,10 @@ const PatientSummaryModal = ({ patient, onClose }) => {
                 </div>
                 {doc.medicines?.map((m, i) => (
                   <div key={i} className={`ps-med-row ${i % 2 === 1 ? 'alt' : ''}`}>
-                    <span className="ps-med-name">{m.name}</span>
+                    <span className="ps-med-name">
+                      {m.name}
+                      {m.timing && <small style={{ display: 'block', color: '#64748b', fontSize: '0.72rem', fontWeight: 400 }}>{m.timing}</small>}
+                    </span>
                     <span className="ps-mono">{m.dosage}</span>
                     <span>{m.frequency}</span>
                     <span className="ps-mono">{m.duration}</span>

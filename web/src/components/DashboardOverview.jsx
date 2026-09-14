@@ -422,9 +422,31 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient, onResetCoh
         const doc = recordsModalPatient.pastRecords || recordsModalPatient.documents || {};
         const medicines = doc.medicines || [];
         const insights = doc.insights || [];
+        const rxDateDisplay = doc.prescriptionDate || doc.documentDate || doc.date || 'Recent';
+
+        // Dynamic calculation of medication duration
+        const getDurationNotice = () => {
+          if (doc.takingDurationText) return doc.takingDurationText;
+          if (recordsModalPatient.takingDurationText) return recordsModalPatient.takingDurationText;
+          const dateStr = doc.prescriptionDate || doc.documentDate || doc.date;
+          if (!dateStr) return null;
+          const rxDate = new Date(dateStr);
+          if (isNaN(rxDate.getTime())) return null;
+          const diffDays = Math.max(0, Math.floor((new Date().getTime() - rxDate.getTime()) / (1000 * 60 * 60 * 24)));
+          if (diffDays === 0) return "Patient started taking this medicine today";
+          if (diffDays === 1) return "Patient is taking this medicine for 1 day";
+          if (diffDays < 30) return `Patient is taking this medicine for ${diffDays} days`;
+          const months = Math.floor(diffDays / 30);
+          const remDays = diffDays % 30;
+          return remDays === 0
+            ? `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''}`
+            : `Patient is taking this medicine for ${months} month${months > 1 ? 's' : ''} and ${remDays} day(s) (${diffDays} days total)`;
+        };
+        const durationNotice = getDurationNotice();
+
         return (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecordsModalPatient(null)}>
-            <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', width: '560px', maxWidth: '92%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', width: '580px', maxWidth: '92%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 'bold', fontSize: '1.05rem' }}>
                   <FileText size={20} color="#0E7C66" />
@@ -435,10 +457,18 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient, onResetCoh
                 </button>
               </div>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.84rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.84rem' }}>
                 <div><strong>Document:</strong> {doc.type || doc.documentType || 'OPD Prescription'}</div>
-                <div><strong>Date:</strong> {doc.date || doc.documentDate || 'Recent'}</div>
+                <div><strong>Prescription Date:</strong> <span style={{ color: '#0e7c66', fontWeight: 600 }}>{rxDateDisplay}</span></div>
               </div>
+
+              {/* Patient Taking Duration Status Badge */}
+              {durationNotice && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.86rem', color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={16} color="#16a34a" />
+                  <span>⏱️ {durationNotice}</span>
+                </div>
+              )}
 
               {(doc.doctor || doc.prescribingDoctor) && (
                 <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '12px' }}>
@@ -458,16 +488,23 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient, onResetCoh
                         <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Medicine</th>
                         <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Dosage</th>
                         <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Frequency</th>
-                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Duration</th>
+                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Prescribed Duration</th>
                       </tr>
                     </thead>
                     <tbody>
                       {medicines.map((m, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>{m.name}</td>
+                          <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>
+                            <div>{m.name}</div>
+                            {m.timing && <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 400 }}>{m.timing}</div>}
+                          </td>
                           <td style={{ padding: '8px 10px', color: '#475569' }}>{m.dosage}</td>
                           <td style={{ padding: '8px 10px', color: '#475569' }}>{m.frequency}</td>
-                          <td style={{ padding: '8px 10px', color: '#475569' }}>{m.duration}</td>
+                          <td style={{ padding: '8px 10px', color: '#475569' }}>
+                            <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '4px', fontSize: '0.76rem', fontWeight: 600 }}>
+                              {m.duration}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
