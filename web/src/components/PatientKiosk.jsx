@@ -6,6 +6,7 @@ import {
   Camera, FileUp, Pill
 } from "lucide-react";
 import "./PatientKiosk.css";
+import { requestAiTriageQuestions } from "../services/aiTriageService";
 
 const LANGUAGES = [
   { code: "en", speechCode: "en-IN", name: "English", native: "English", flag: "EN", region: "International" },
@@ -487,7 +488,8 @@ export default function PatientKiosk({ onExit }) {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [questionQueue, setQuestionQueue] = useState([]);
-  const [askedSymptoms, setAskedSymptoms] = useState([]);
+  const [identifiedConditions, setIdentifiedConditions] = useState([]);
+  const [askedQuestions, setAskedQuestions] = useState([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [activeBranch, setActiveBranch] = useState(null);
   
@@ -515,8 +517,10 @@ export default function PatientKiosk({ onExit }) {
   useEffect(() => { voiceTextRef.current = voiceText; }, [voiceText]);
   const questionQueueRef = useRef(questionQueue);
   useEffect(() => { questionQueueRef.current = questionQueue; }, [questionQueue]);
-  const askedSymptomsRef = useRef(askedSymptoms);
-  useEffect(() => { askedSymptomsRef.current = askedSymptoms; }, [askedSymptoms]);
+  const identifiedConditionsRef = useRef(identifiedConditions);
+  useEffect(() => { identifiedConditionsRef.current = identifiedConditions; }, [identifiedConditions]);
+  const askedQuestionsRef = useRef(askedQuestions);
+  useEffect(() => { askedQuestionsRef.current = askedQuestions; }, [askedQuestions]);
   const activeBranchRef = useRef(activeBranch);
   useEffect(() => { activeBranchRef.current = activeBranch; }, [activeBranch]);
   const systemModeRef = useRef(systemMode);
@@ -528,7 +532,7 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [chatHistory, interimText, isAiTyping]);
 
-  const handleSendChat = (text = chatInput) => {
+  const handleSendChat = async (text = chatInput) => {
     if (!text.trim()) return;
     const msgText = text.trim();
     
@@ -539,120 +543,60 @@ export default function PatientKiosk({ onExit }) {
     
     setIsAiTyping(true);
 
-    setTimeout(() => {
-      let aiResponse = "";
-      const historyText = chatHistoryRef.current.map(m => m.text).join(" ") + " " + msgText;
-      const lower = historyText.toLowerCase();
-      const lowerMsg = msgText.toLowerCase();
+    try {
+      const currentQueue = [...questionQueueRef.current];
+      const prevConditions = [...identifiedConditionsRef.current];
+      const prevAsked = [...askedQuestionsRef.current];
 
-      // Ensure base queue is initialized
-      let currentQueue = [...questionQueueRef.current];
-      
-      const COMMON_QUESTIONS_EN = [
-        "How exactly long have you been feeling these symptoms?",
-        "What medicines have you taken earlier for this, or have you consulted any other doctor?",
-        "Do you have any past medical history like diabetes or hypertension?",
-        "Are you allergic to any medications?"
-      ];
+      // Request dynamic disease-specific questions from AI
+      const aiData = await requestAiTriageQuestions({
+        userMessage: msgText,
+        knownConditions: prevConditions,
+        askedQuestions: prevAsked,
+        chatHistory: chatHistoryRef.current,
+        lang
+      });
 
-      const COMMON_QUESTIONS_HI = [
-        "आप कितने समय से इन लक्षणों को महसूस कर रहे हैं?",
-        "क्या आपने इसके लिए पहले कोई दवा ली है, या किसी अन्य डॉक्टर से सलाह ली है?",
-        "क्या आपको मधुमेह (डायबिटीज) या उच्च रक्तचाप (ब्लड प्रेशर) जैसी कोई पुरानी बीमारी है?",
-        "क्या आपको किसी दवा से एलर्जी है?"
-      ];
+      let updatedConditions = [...prevConditions];
+      if (aiData && aiData.newCondition && !prevConditions.includes(aiData.newCondition)) {
+        updatedConditions = [...prevConditions, aiData.newCondition];
+        setIdentifiedConditions(updatedConditions);
 
-      const AYUSH_QUESTIONS_EN = [
-        "To help with your Ayurvedic assessment, how is your digestion and appetite usually? Do you feel heavy or light after meals?",
-        "Lastly, how would you describe your body frame, natural body weight, and general temperament? (This helps determine your Prakriti)"
-      ];
-
-      const AYUSH_QUESTIONS_HI = [
-        "आपके आयुर्वेदिक निदान के लिए, आपकी पाचन शक्ति और भूख कैसी है? क्या भोजन के बाद भारीपन या हल्कापन महसूस होता है?",
-        "अंत में, आप अपने शरीर की बनावट, वजन और सामान्य स्वभाव का वर्णन कैसे करेंगे? (इससे आपकी प्रकृति जानने में मदद मिलती है)"
-      ];
-
-      const commonQ = lang === "hi" ? COMMON_QUESTIONS_HI : COMMON_QUESTIONS_EN;
-      const ayushQ = lang === "hi" ? AYUSH_QUESTIONS_HI : AYUSH_QUESTIONS_EN;
-
-      if (currentQueue.length === 0 && chatHistoryRef.current.length <= 2) {
-         // Initialize standard queue if empty and it's the first response
-         currentQueue = [
-            commonQ[0], 
-            commonQ[1], 
-            systemModeRef.current === "ayush" ? ayushQ[0] : commonQ[2], 
-            systemModeRef.current === "ayush" ? ayushQ[1] : commonQ[3]
-         ];
-      }
-
-      // 1. Detect any new symptoms in the latest message
-      const SYMPTOM_MAP = [
-        { id: "chest", kw: ["chest", "heart", "breath", "छाती", "सीने", "सांस"] },
-        { id: "headache", kw: ["headache", "head pain", "सिरदर्द", "सर दर्द", "माथा"] },
-        { id: "stomach", kw: ["stomach", "belly", "pain in abdomen", "पेट", "पेट दर्द"] },
-        { id: "fever", kw: ["fever", "temperature", "बुखार", "तापमान"] },
-        { id: "cough", kw: ["cough", "खांसी", "कफ"] },
-      ];
-
-      let detectedSymptoms = [...askedSymptomsRef.current];
-      let newlyDetected = [];
-
-      SYMPTOM_MAP.forEach(sym => {
-        if (!detectedSymptoms.includes(sym.id)) {
-           if (sym.kw.some(k => lowerMsg.includes(k))) {
-              newlyDetected.push(sym.id);
-              detectedSymptoms.push(sym.id);
-           }
+        // Queue logic:
+        // 1. First condition: AI generated 4 essential questions specifically for that condition.
+        // 2. Additional condition: AI generated 3 questions relevant to BOTH previous & new conditions.
+        if (Array.isArray(aiData.generatedQuestions) && aiData.generatedQuestions.length > 0) {
+          currentQueue.push(...aiData.generatedQuestions);
         }
-      });
-      
-      // If we found NO symptoms in latest message but it's the very first message, detect from general history
-      if (newlyDetected.length === 0 && chatHistoryRef.current.length <= 2) {
-         SYMPTOM_MAP.forEach(sym => {
-            if (!detectedSymptoms.includes(sym.id)) {
-               if (sym.kw.some(k => lower.includes(k))) {
-                  newlyDetected.push(sym.id);
-                  detectedSymptoms.push(sym.id);
-               }
-            }
-         });
       }
 
-      setAskedSymptoms(detectedSymptoms);
+      // If user answer already provided information for a queued question, filter it out
+      if (aiData && aiData.answeredQuestionKeyword) {
+        const kw = aiData.answeredQuestionKeyword.toLowerCase();
+        const filteredQueue = currentQueue.filter(q => !q.toLowerCase().includes(kw));
+        currentQueue.length = 0;
+        currentQueue.push(...filteredQueue);
+      }
 
-      const SYMPTOM_TREE_EN = {
-        headache: ["Is the pain localized to one side of your head, or all over?", "Are you experiencing any sensitivity to light, nausea, or blurry vision?"],
-        stomach: ["Is the pain sharp or dull, and does it get worse after eating?", "Have you had any vomiting, diarrhea, or unusual bowel movements recently?"],
-        fever: ["Have you checked your exact temperature recently? How high is it?", "Are you experiencing any body aches, shivering chills, or sweating?"],
-        cough: ["Is it a dry cough, or are you coughing up phlegm? If so, what color is it?", "Are you experiencing any shortness of breath or wheezing sound when you breathe?"],
-        chest: ["To assess your chest discomfort: Is it a burning acidity sensation that worsens after food/lying down, or a heavy crushing tightness spreading to your left arm or jaw?", "Are you experiencing cold sweating, dizziness, or severe difficulty breathing right now?"]
-      };
-
-      const SYMPTOM_TREE_HI = {
-        headache: ["क्या दर्द सिर के एक हिस्से में है, या पूरे सिर में?", "क्या आपको रोशनी से परेशानी, मतली या धुंधलापन महसूस हो रहा है?"],
-        stomach: ["क्या दर्द तेज है या हल्का, और क्या यह खाने के बाद बढ़ जाता है?", "क्या आपको हाल ही में उल्टी, दस्त या मल त्याग में कोई असामान्य बदलाव महसूस हुआ है?"],
-        fever: ["क्या आपने हाल ही में अपना तापमान मापा है? यह कितना है?", "क्या आपको शरीर में दर्द, ठंड लगना या पसीना आ रहा है?"],
-        cough: ["क्या यह सूखी खांसी है, या बलगम आ रहा है? यदि हां, तो उसका रंग कैसा है?", "क्या आपको सांस लेने में तकलीफ या सीटी बजने जैसी आवाज़ आ रही है?"],
-        chest: ["सीने की तकलीफ के सही मूल्यांकन के लिए: क्या यह खाना खाने के बाद एसिडिटी जैसी जलन लग रही है, या फिर बहुत भारी दबाव है जो बाएं हाथ या जबड़े तक फैल रहा है?", "क्या आपको साथ में ठंडा पसीना, अचानक चक्कर, या बहुत तेज सांस फूलने की समस्या हो रही है?"]
-      };
-      
-      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
-
-      // Add specific questions to the FRONT of the queue for newly detected symptoms
-      newlyDetected.reverse().forEach(symId => {
-         if (tree[symId]) {
-            currentQueue.unshift(tree[symId][1]);
-            currentQueue.unshift(tree[symId][0]);
-         }
-      });
-
-      // 2. Pop the next question
+      let aiResponse = "";
       if (currentQueue.length > 0) {
-         aiResponse = currentQueue.shift();
+        // Pop next question from queue in order
+        const nextQ = currentQueue.shift();
+        setAskedQuestions(prev => [...prev, nextQ]);
+
+        // Formulate response with polite acknowledgment if available
+        if (aiData?.briefAcknowledgment && (aiData?.newCondition || chatHistoryRef.current.length <= 2)) {
+          aiResponse = `${aiData.briefAcknowledgment} ${nextQ}`;
+        } else if (aiData?.briefAcknowledgment && Math.random() > 0.5) {
+          aiResponse = `${aiData.briefAcknowledgment} ${nextQ}`;
+        } else {
+          aiResponse = nextQ;
+        }
       } else {
-         aiResponse = lang === "hi"
-            ? "विस्तृत जानकारी के लिए धन्यवाद। मैंने इसे डॉक्टर के लिए संकलित कर लिया है। अब आप अपना सारांश देखने के लिए 'Continue' पर क्लिक कर सकते हैं।"
-            : "Thank you for the detailed information. I have compiled this for the doctor. You can now click Continue to review your summary.";
+        // Queue completed
+        aiResponse = lang === "hi"
+          ? "विस्तृत जानकारी के लिए धन्यवाद। मैंने आपकी सभी स्वास्थ्य जानकारी डॉक्टर के लिए संकलित कर ली है। अब आप अपना सारांश देखने के लिए 'Continue' पर क्लिक कर सकते हैं।"
+          : "Thank you for providing these details. I have compiled your complete symptom assessment and triage summary for the consulting physician. Please click Continue to review.";
       }
 
       setQuestionQueue(currentQueue);
@@ -661,7 +605,15 @@ export default function PatientKiosk({ onExit }) {
         setChatHistory(prev => [...prev, { sender: "ai", text: aiResponse }]);
         if (!speechError) playTTS(aiResponse, true);
       }
-    }, 1800);
+    } catch (err) {
+      console.error("AI Triage Queue Error:", err);
+      setIsAiTyping(false);
+      const fallbackQ = lang === "hi"
+        ? "क्या आप बता सकते हैं कि यह तकलीफ कितने दिनों से है और क्या यह बढ़ रही है?"
+        : "Could you describe how many days you have had these symptoms and whether they are worsening?";
+      setChatHistory(prev => [...prev, { sender: "ai", text: fallbackQ }]);
+      if (!speechError) playTTS(fallbackQ, true);
+    }
   };
 
   const selectedLang = LANGUAGES.find(l => l.code === lang);

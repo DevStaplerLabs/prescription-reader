@@ -4,6 +4,7 @@ import {
   uploadPrescription,
   parsePrescription,
   confirmPrescription,
+  generateTriageQuestions,
 } from '../controllers/prescriptionController.js';
 
 const router = express.Router();
@@ -16,5 +17,8 @@ router.post('/parse', upload.single('image'), parsePrescription);
 
 // POST /api/prescriptions/confirm - Save verified prescription + generate schedule
 router.post('/confirm', confirmPrescription);
+
+// POST /api/prescriptions/triage-questions - Dynamic disease-specific triage question generator
+router.post('/triage-questions', generateTriageQuestions);
 
 export default router;

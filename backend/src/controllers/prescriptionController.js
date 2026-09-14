@@ -1,5 +1,6 @@
 import { extractTextFromImage } from '../services/visionService.js';
 import { parsePrescriptionImage, generateScheduleFromParsed } from '../services/nlpService.js';
+import { parseTextWithGemini } from '../services/geminiService.js';
 import Prescription from '../models/Prescription.js';
 import Schedule from '../models/Schedule.js';
 import Patient from '../models/Patient.js';
@@ -159,6 +160,63 @@ export const confirmPrescription = async (req, res, next) => {
         scheduleId: schedule._id,
         schedule: schedule,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Generates dynamic disease-specific triage questions to assess criticality.
+ * POST /api/prescriptions/triage-questions
+ */
+export const generateTriageQuestions = async (req, res, next) => {
+  try {
+    const {
+      userMessage,
+      knownConditions = [],
+      askedQuestions = [],
+      chatHistory = [],
+      lang = 'en'
+    } = req.body;
+
+    if (!userMessage) {
+      return res.status(400).json({ status: 'error', message: 'userMessage is required' });
+    }
+
+    const isFirst = knownConditions.length === 0;
+    const prompt = `You are an expert Clinical Triage AI assistant in an OPD hospital kiosk.
+Analyze the patient's latest message in context of the conversation and determine if a medical condition, symptom, or disease is mentioned.
+Language for questions and acknowledgment: ${lang === 'hi' ? 'Hindi (Devanagari script)' : 'English'}.
+
+Current known conditions so far: ${JSON.stringify(knownConditions)}
+Questions already asked: ${JSON.stringify(askedQuestions)}
+
+INSTRUCTIONS:
+1. Detect if a medical condition, disease, or symptom is mentioned in the latest message.
+   - If it is already covered in known conditions, or if the user is just answering a question (e.g. "since 3 days", "no fever", "yes it hurts", "nothing else"), set "newCondition": null.
+   - If a new condition/symptom is mentioned (e.g. "pimples on face", "chest burning", "vomiting", "knee pain"), set "newCondition" to the concise name of that condition (e.g. "Acne / Facial Pimples").
+2. Question Generation:
+   - If "newCondition" is detected and knownConditions is empty (FIRST condition):
+     Generate exactly 4 essential, disease-specific must-ask questions for that condition to determine whether the patient is in a critical, urgent, or non-urgent condition. Prioritize questions about red-flag symptoms, severity, duration, progression, associated symptoms, and other factors that could indicate a potentially serious condition. Do NOT ask unrelated questions.
+   - If "newCondition" is detected and knownConditions is NOT empty (ADDITIONAL condition):
+     Generate exactly 3 must-ask questions that are relevant to BOTH the previously identified conditions (${knownConditions.join(', ')}) AND the newly mentioned condition, assessing the combined clinical situation.
+   - If "newCondition" is null (patient is answering):
+     Set "generatedQuestions": [].
+3. Ensure questions are simple, compassionate, and understandable to a normal patient, not overly technical.
+4. Strictly avoid duplicate questions that have already been asked in Questions already asked.
+
+Return valid JSON:
+{
+  "newCondition": "string or null",
+  "generatedQuestions": ["string", ...],
+  "briefAcknowledgment": "Short natural 3-6 word acknowledgment in ${lang === 'hi' ? 'Hindi' : 'English'}"
+}`;
+
+    const parsed = await parseTextWithGemini(prompt, userMessage);
+    return res.status(200).json({
+      status: 'success',
+      data: parsed
     });
   } catch (error) {
     next(error);
