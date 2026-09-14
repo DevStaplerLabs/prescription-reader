@@ -9,7 +9,9 @@ import {
   Activity,
   Search,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  FileText,
+  X
 } from 'lucide-react';
 import { PATIENT_VOLUME_DATA } from '../data/patientsData';
 import './DashboardOverview.css';
@@ -17,6 +19,7 @@ import './DashboardOverview.css';
 const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [recordsModalPatient, setRecordsModalPatient] = useState(null);
 
   // Stats calculation
   const totalCount = 24;
@@ -316,16 +319,17 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
                         <div className="dov-patient-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span>{patient.name}</span>
                           {patient.tokenNumber && <span style={{ fontSize: '11px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{patient.tokenNumber}</span>}
-                          {patient.pastRecords && (
+                          {(patient.pastRecords || patient.documents) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setRecordsModalPatient(patient);
                               }}
-                              style={{ background: '#e0f2fe', color: '#0284c7', border: 'none', padding: '4px', borderRadius: '4px', cursor: 'pointer', display: 'flex' }}
-                              title="View Attached Records"
+                              style={{ background: '#e0f2fe', color: '#0284c7', border: 'none', padding: '3px 7px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                              title="View Attached Prescription & Records"
                             >
-                              <FileText size={14} />
+                              <FileText size={12} />
+                              <span>Rx Records</span>
                             </button>
                           )}
                         </div>
@@ -388,34 +392,78 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
         </div>
       </div>
 
-      {/* Records Modal */}
-      {recordsModalPatient && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecordsModalPatient(null)}>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 'bold' }}>
-                <FileText size={18} color="#0E7C66" />
-                <span>Uploaded Records: {recordsModalPatient.name}</span>
+      {/* Records Modal with Digitized Medicines Table */}
+      {recordsModalPatient && (() => {
+        const doc = recordsModalPatient.pastRecords || recordsModalPatient.documents || {};
+        const medicines = doc.medicines || [];
+        const insights = doc.insights || [];
+        return (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecordsModalPatient(null)}>
+            <div style={{ background: '#fff', borderRadius: '14px', padding: '24px', width: '560px', maxWidth: '92%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 'bold', fontSize: '1.05rem' }}>
+                  <FileText size={20} color="#0E7C66" />
+                  <span>Digitized Prescription Records: {recordsModalPatient.name}</span>
+                </div>
+                <button onClick={() => setRecordsModalPatient(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                  <X size={20} />
+                </button>
               </div>
-              <button onClick={() => setRecordsModalPatient(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '8px' }}>
-              <strong>Document Type:</strong> {recordsModalPatient.pastRecords.type}
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#475569' }}>
-              <strong>AI Extracted Insights:</strong>
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-                {recordsModalPatient.pastRecords.insights.map((ins, i) => (
-                  <li key={i} style={{ marginBottom: '4px' }}>{ins}</li>
-                ))}
-              </ul>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.84rem' }}>
+                <div><strong>Document:</strong> {doc.type || doc.documentType || 'OPD Prescription'}</div>
+                <div><strong>Date:</strong> {doc.date || doc.documentDate || 'Recent'}</div>
+              </div>
+
+              {(doc.doctor || doc.prescribingDoctor) && (
+                <div style={{ fontSize: '0.85rem', color: '#334155', marginBottom: '12px' }}>
+                  <strong>Prescribing Physician:</strong> {doc.doctor || doc.prescribingDoctor}
+                </div>
+              )}
+
+              {medicines.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.84rem', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sparkles size={14} color="#0E7C66" />
+                    <span>AI Extracted Medications ({medicines.length} Detected)</span>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
+                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Medicine</th>
+                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Dosage</th>
+                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Frequency</th>
+                        <th style={{ padding: '8px 10px', borderBottom: '1.5px solid #cbd5e1' }}>Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {medicines.map((m, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>{m.name}</td>
+                          <td style={{ padding: '8px 10px', color: '#475569' }}>{m.dosage}</td>
+                          <td style={{ padding: '8px 10px', color: '#475569' }}>{m.frequency}</td>
+                          <td style={{ padding: '8px 10px', color: '#475569' }}>{m.duration}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {insights.length > 0 && (
+                <div style={{ fontSize: '0.84rem', color: '#475569', background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+                  <strong style={{ color: '#1e293b' }}>Clinical Notes & Observations:</strong>
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px' }}>
+                    {insights.map((ins, i) => (
+                      <li key={i} style={{ marginBottom: '4px' }}>{ins}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

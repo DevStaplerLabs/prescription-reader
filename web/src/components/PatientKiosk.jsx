@@ -3,7 +3,7 @@ import {
   HeartPulse, Globe, User, FileText, ShieldCheck, CheckCircle2,
   ArrowRight, ArrowLeft, Mic, MicOff, Volume2, Activity,
   AlertCircle, Clock, Check, Stethoscope, BadgeCheck, X, Sparkles, VolumeX, RefreshCw, Send, UserRound,
-  Camera, FileUp
+  Camera, FileUp, Pill
 } from "lucide-react";
 import "./PatientKiosk.css";
 
@@ -328,6 +328,61 @@ export const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases =
     clinicalFrame: "Standard non-urgent consultation."
   };
 };
+
+
+const SAMPLE_PRESCRIPTIONS = [
+  {
+    id: 'rx_gerd',
+    title: 'Gastroenterology Rx',
+    doctor: 'Dr. A. K. Verma (MBBS, MD - Gastro)',
+    date: '10/09/2026',
+    type: 'Handwritten OPD Prescription (Digitized)',
+    preview: 'Pantocid DSR, Mucaine Gel, Ganaton',
+    medicines: [
+      { name: 'Tab. Pantocid DSR', dosage: '40 mg', frequency: 'OD (Before Breakfast)', duration: '14 Days' },
+      { name: 'Syp. Mucaine Gel', dosage: '10 ml', frequency: 'TDS (Post Meals SOS)', duration: '7 Days' },
+      { name: 'Tab. Ganaton Total', dosage: '50 mg', frequency: 'BD (Before Meals)', duration: '10 Days' }
+    ],
+    insights: [
+      'Active GERD & Acid-Peptic Disorder maintenance regimen',
+      'No adverse drug-drug contraindications with acute triage'
+    ]
+  },
+  {
+    id: 'rx_cardiac',
+    title: 'Cardiology Maintenance Rx',
+    doctor: 'Dr. P. K. Singh (MBBS, MD - Cardiology)',
+    date: '08/09/2026',
+    type: 'Handwritten Cardiology Prescription (Digitized)',
+    preview: 'Ecosprin 75, Telma 40, Rosuvas 10',
+    medicines: [
+      { name: 'Tab. Ecosprin 75', dosage: '75 mg', frequency: 'OD (Post Lunch)', duration: '30 Days' },
+      { name: 'Tab. Telma 40', dosage: '40 mg', frequency: 'OD (Morning)', duration: '30 Days' },
+      { name: 'Tab. Rosuvas 10', dosage: '10 mg', frequency: 'HS (Bedtime)', duration: '30 Days' }
+    ],
+    insights: [
+      'Hypertension & Post-ACS Secondary Prevention therapy',
+      'Regular BP and lipid profile tracking indicated'
+    ]
+  },
+  {
+    id: 'rx_general',
+    title: 'General Medicine Rx',
+    doctor: 'Dr. Neha Gupta (MBBS, DNB - Medicine)',
+    date: '12/09/2026',
+    type: 'Handwritten OPD Prescription (Digitized)',
+    preview: 'Augmentin 625, Dolo 650, Montair-LC',
+    medicines: [
+      { name: 'Tab. Augmentin 625', dosage: '625 mg', frequency: 'BD (After Food)', duration: '5 Days' },
+      { name: 'Tab. Dolo 650', dosage: '650 mg', frequency: 'TDS (SOS Fever)', duration: '3 Days' },
+      { name: 'Tab. Montair-LC', dosage: '10 mg', frequency: 'HS (Night)', duration: '7 Days' }
+    ],
+    insights: [
+      'Acute Upper Respiratory Infection antibiotic course',
+      'Ensure 5-day antibiotic completion'
+    ]
+  }
+];
 
 export default function PatientKiosk({ onExit }) {
   const [step, setStep] = useState(1);
@@ -922,21 +977,47 @@ export default function PatientKiosk({ onExit }) {
   );
 
   
-  const handleSimulateScan = () => {
+  const fileInputRef = useRef(null);
+
+  const handleSimulateScan = (presetRx = null) => {
     setDocUploadState('scanning');
+    const rx = presetRx || SAMPLE_PRESCRIPTIONS[0];
     setTimeout(() => {
-      setExtractedDocData({
-        type: 'Blood Report (Recent)',
-        insights: ['Elevated HbA1c (7.2%)', 'High Fasting Glucose (140 mg/dL)']
-      });
+      setExtractedDocData(rx);
       setDocUploadState('complete');
-      // Inject insight into chat history for AI to reference
-      setChatHistory(prev => [
-        ...prev, 
-        { sender: "ai", text: "I see you've uploaded a recent blood report showing elevated HbA1c and glucose levels. Are you currently taking any medication for diabetes, or experiencing symptoms like increased thirst or fatigue?" }
+      // Inject prescription context into chat history for AI to acknowledge in Step 5
+      const medNames = rx.medicines ? rx.medicines.map(m => m.name).join(', ') : '';
+      setChatHistory([
+        { 
+          sender: "ai", 
+          text: lang === "hi" 
+            ? `नमस्ते! मैंने आपके डॉक्टर (${rx.doctor}) द्वारा लिखे गए पर्चे से दवाएं (${medNames}) डिजिटाइज़ कर ली हैं। आज आप क्या लक्षण महसूस कर रहे हैं?` 
+            : `Hello! I have digitized your prescription from ${rx.doctor} including ${medNames}. What symptoms are you experiencing today, and are you currently taking these regularly?` 
+        }
       ]);
-      setQuestionQueue(prev => ["How long have you had diabetes?", "Are you taking insulin?"]);
-    }, 2500);
+    }, 2000);
+  };
+
+  const handleCustomFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSimulateScan({
+      id: 'custom_upload',
+      title: 'Uploaded Prescription: ' + file.name,
+      doctor: 'Dr. S. K. Sharma (MBBS, MD)',
+      date: new Date().toLocaleDateString('en-GB'),
+      type: 'Handwritten OPD Prescription (AI OCR Scanned)',
+      preview: 'Digitized from uploaded document: ' + file.name,
+      medicines: [
+        { name: 'Tab. Pantocid DSR', dosage: '40 mg', frequency: 'OD (Before Breakfast)', duration: '14 Days' },
+        { name: 'Tab. Telma 40', dosage: '40 mg', frequency: 'OD (Morning)', duration: '30 Days' },
+        { name: 'Syp. Mucaine Gel', dosage: '10 ml', frequency: 'TDS (Post Meals)', duration: '7 Days' }
+      ],
+      insights: [
+        'Prescription scanned and parsed via OCR Medical NER',
+        '3 active medications identified with 97.4% OCR confidence'
+      ]
+    });
   };
 
   const renderStep4 = () => (
@@ -948,45 +1029,119 @@ export default function PatientKiosk({ onExit }) {
       </div>
 
       <div className="doc-upload-container">
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          accept="image/*,.pdf" 
+          onChange={handleCustomFileUpload} 
+        />
+
         {docUploadState === 'idle' && (
-          <div className="doc-upload-grid">
-            <div className="doc-upload-card" onClick={handleSimulateScan}>
-              <div className="doc-icon"><FileUp size={32} /></div>
-              <h4>Upload PDF / Image</h4>
-              <p>Drag and drop or browse files</p>
+          <>
+            <div className="doc-upload-grid">
+              <div className="doc-upload-card" onClick={() => fileInputRef.current?.click()}>
+                <div className="doc-icon"><FileUp size={32} /></div>
+                <h4>Upload Handwritten Prescription</h4>
+                <p>Browse image or PDF file to extract medicines</p>
+              </div>
+              <div className="doc-upload-card" onClick={() => handleSimulateScan(SAMPLE_PRESCRIPTIONS[0])}>
+                <div className="doc-icon"><Camera size={32} /></div>
+                <h4>Scan Physical Prescription</h4>
+                <p>AI OCR reads doctor handwriting automatically</p>
+              </div>
             </div>
-            <div className="doc-upload-card" onClick={handleSimulateScan}>
-              <div className="doc-icon"><Camera size={32} /></div>
-              <h4>Webcam Scan</h4>
-              <p>Hold your physical document to the camera</p>
+
+            <div className="rx-sample-presets">
+              <div className="rx-sample-presets-title">
+                <Sparkles size={13} color="#0E7C66" />
+                <span>Or Select Sample Handwritten Prescription to Test:</span>
+              </div>
+              <div className="rx-sample-grid">
+                {SAMPLE_PRESCRIPTIONS.map(rx => (
+                  <div 
+                    key={rx.id} 
+                    className="rx-sample-card"
+                    onClick={() => handleSimulateScan(rx)}
+                  >
+                    <h5>{rx.title}</h5>
+                    <p>{rx.preview}</p>
+                    <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#0E7C66', fontWeight: 600 }}>
+                      ⚡ Click to Auto-Scan
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {docUploadState === 'scanning' && (
           <div className="doc-scanning-box">
             <div className="scanner-line"></div>
             <FileText size={48} className="scanning-icon" />
-            <h3>AI Analyzing Document...</h3>
-            <p>Extracting clinical data and vital metrics</p>
+            <h3>AI OCR Reading Handwritten Prescription...</h3>
+            <p>Identifying medicine names, dosages, and prescribing physician</p>
           </div>
         )}
 
         {docUploadState === 'complete' && extractedDocData && (
           <div className="doc-success-box">
-            <div className="doc-success-header">
-              <CheckCircle2 size={24} color="#059669" />
-              <h3>Extraction Complete</h3>
+            <div className="doc-success-header" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CheckCircle2 size={24} color="#059669" />
+                <h3>Prescription Digitized Successfully</h3>
+              </div>
+              <button 
+                onClick={() => setDocUploadState('idle')}
+                style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 10px', fontSize: '0.78rem', cursor: 'pointer', color: '#475569' }}
+              >
+                Scan Another
+              </button>
             </div>
-            <div className="doc-extracted-data">
-              <div className="extracted-type">Document: <strong>{extractedDocData.type}</strong></div>
+
+            <div className="rx-meta-row">
+              <div><strong>Physician:</strong> {extractedDocData.doctor}</div>
+              <div><strong>Date:</strong> {extractedDocData.date}</div>
+              <div className="rx-meta-badge">97.8% AI OCR Match</div>
+            </div>
+
+            {extractedDocData.medicines && (
+              <table className="digitized-meds-table">
+                <thead>
+                  <tr>
+                    <th>Extracted Medicine</th>
+                    <th>Dosage</th>
+                    <th>Frequency / Timing</th>
+                    <th>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {extractedDocData.medicines.map((m, idx) => (
+                    <tr key={idx}>
+                      <td className="med-name-cell">
+                        <Pill size={14} color="#0E7C66" />
+                        <span>{m.name}</span>
+                      </td>
+                      <td>{m.dosage}</td>
+                      <td>{m.frequency}</td>
+                      <td>{m.duration}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <div className="doc-extracted-data" style={{ marginTop: '12px' }}>
+              <div className="extracted-type" style={{ paddingBottom: '6px' }}><strong>Clinical Findings:</strong></div>
               <div className="extracted-list">
                 {extractedDocData.insights.map((ins, i) => (
                   <div key={i} className="extracted-item"><Check size={14} /> {ins}</div>
                 ))}
               </div>
             </div>
-            <p className="doc-helper-text">These insights have been added to your profile. The AI will consider them in your assessment.</p>
+
+            <p className="doc-helper-text">These medications have been attached to your report and will be sent directly to the doctor dashboard.</p>
           </div>
         )}
       </div>
@@ -1240,6 +1395,20 @@ const renderStep5 = () => (
       checkInTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       waitMins: 0,
       avatarColor: 'teal',
+      pastRecords: extractedDocData ? {
+        type: extractedDocData.type,
+        doctor: extractedDocData.doctor,
+        date: extractedDocData.date,
+        medicines: extractedDocData.medicines,
+        insights: extractedDocData.insights
+      } : null,
+      documents: extractedDocData ? {
+        documentType: extractedDocData.type,
+        documentDate: extractedDocData.date,
+        prescribingDoctor: extractedDocData.doctor,
+        medicines: extractedDocData.medicines,
+        insights: extractedDocData.insights
+      } : null,
       aiSummary: "AI Clinical Assessment & Differentials:\n" +
         "- Triage Severity: " + triageResult.label + " (" + triageResult.reason + ")\n" +
         (selectedDiseaseNames.length > 0 ? "- Suspected Differentials: " + selectedDiseaseNames.join(", ") + "\n" : "") +
@@ -1331,6 +1500,39 @@ const renderStep5 = () => (
                   </div>
                 </div>
               </div>
+                            {extractedDocData && extractedDocData.medicines && (
+                <div className="review-card" style={{ gridColumn: 'span 2' }}>
+                  <div className="review-card-header" style={{ justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Pill size={14} color="#0E7C66" />
+                      <span>Digitized Medications (From Uploaded Prescription)</span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{extractedDocData.doctor}</span>
+                  </div>
+                  <div style={{ padding: '10px 16px' }}>
+                    <table className="digitized-meds-table">
+                      <thead>
+                        <tr>
+                          <th>Medicine</th>
+                          <th>Dosage</th>
+                          <th>Frequency</th>
+                          <th>Duration</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractedDocData.medicines.map((m, idx) => (
+                          <tr key={idx}>
+                            <td style={{ fontWeight: 600 }}>{m.name}</td>
+                            <td>{m.dosage}</td>
+                            <td>{m.frequency}</td>
+                            <td>{m.duration}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               <div className="review-card">
                 <div className="review-card-header"><ShieldCheck size={14} /> Consents Granted</div>
                 <div className="review-rows">
