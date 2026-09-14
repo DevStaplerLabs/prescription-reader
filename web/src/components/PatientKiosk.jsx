@@ -668,16 +668,16 @@ export default function PatientKiosk({ onExit }) {
 
       <div className="assessment-grid">
         <div className="assessment-pane">
-          <div className="pane-label">Detected Symptoms & Keywords</div>
+          <div className="pane-label">Symptom Checklist (Auto-detected)</div>
           <div className="symptom-chips">
             {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
               const isSelected = symptoms.includes(id);
               const isAuto = autoExtracted.includes(id);
-              if (!isSelected && !isAuto) return null;
               return (
                 <button
                   key={id}
                   className={"symptom-chip severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
+                  style={{ opacity: (isSelected || isAuto) ? 1 : 0.65 }}
                   onClick={() => toggleSymptom(id)}
                 >
                   {label}
@@ -686,9 +686,6 @@ export default function PatientKiosk({ onExit }) {
                 </button>
               );
             })}
-            {symptoms.length === 0 && autoExtracted.length === 0 && (
-              <span style={{ fontSize: '0.8rem', color: '#94A3A3' }}>No keywords detected yet. Describe your symptoms.</span>
-            )}
           </div>
         </div>
 
