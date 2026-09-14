@@ -128,10 +128,10 @@ export const DISEASE_CATEGORIES = [
 ];
 
 const SYMPTOM_CHIPS = [
-  { id: "s1", label: "Chest Pain", severity: "high" },
+  { id: "s1", label: "Chest Pain", severity: "adaptive" },
   { id: "s2", label: "Headache", severity: "medium" },
   { id: "s3", label: "Fever", severity: "medium" },
-  { id: "s4", label: "Breathlessness", severity: "high" },
+  { id: "s4", label: "Breathlessness", severity: "adaptive" },
   { id: "s5", label: "Body Ache", severity: "low" },
   { id: "s6", label: "Stomach Pain", severity: "medium" },
   { id: "s7", label: "Cough", severity: "low" },
@@ -203,6 +203,31 @@ const FALLBACK_SPEECH_PHRASES = {
 };
 
 
+
+// Negation-aware keyword detection to prevent marking negated symptoms/red-flags as positive
+export const hasAffirmedKeyword = (text, kw) => {
+  if (!text || !kw) return false;
+  const lowerText = text.toLowerCase();
+  const lowerKw = kw.toLowerCase();
+  let searchPos = 0;
+  
+  while ((searchPos = lowerText.indexOf(lowerKw, searchPos)) !== -1) {
+    const start = Math.max(0, searchPos - 35);
+    const preceding = lowerText.substring(start, searchPos);
+    const isNegated = [
+      /\bno\b/i, /\bnot\b/i, /\bwithout\b/i, /\bdenies\b/i, /\bnever\b/i, 
+      /\bno\s+pain\b/i, /\bno\s+difficulty\b/i, /\bdont\b/i, /\bdon't\b/i,
+      /नहीं/u, /ना\b/u, /बिल्कुल\s*नहीं/u, /कोई\s*नहीं/u
+    ].some(rx => rx.test(preceding));
+
+    if (!isNegated) {
+      return true;
+    }
+    searchPos += lowerKw.length;
+  }
+  return false;
+};
+
 export const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases = []) => {
   const userText = chatHistory
     .filter(m => m.sender === 'user')
@@ -225,14 +250,15 @@ export const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases =
     "जलन", "गैस", "एसिडिटी", "खट्टी डकार", "खाना खाने के बाद", "दबाने पर", "मांसपेशी", "नहीं फैल रहा", "पसीना नहीं"
   ];
 
-  const hasChestComplaint = userText.includes("chest") || userText.includes("heart") || 
-                           userText.includes("सीने") || userText.includes("छाती") || 
+  const hasChestComplaint = hasAffirmedKeyword(userText, "chest") || hasAffirmedKeyword(userText, "heart") || 
+                           hasAffirmedKeyword(userText, "सीने") || hasAffirmedKeyword(userText, "छाती") || 
                            symptoms.includes("s1");
 
-  const hasCardiacRedFlags = cardiacRedFlags.some(kw => userText.includes(kw)) ||
+  // Only trigger cardiac red flag if an affirmed (NON-NEGATED) cardiac symptom was stated
+  const hasCardiacRedFlags = cardiacRedFlags.some(kw => hasAffirmedKeyword(userText, kw)) ||
                             selectedDiseases.includes("d_angina");
 
-  const hasBenignGastricOrMuscular = benignIndicators.some(kw => userText.includes(kw)) ||
+  const hasBenignGastricOrMuscular = benignIndicators.some(kw => hasAffirmedKeyword(userText, kw)) ||
                                      selectedDiseases.includes("d_gerd") || 
                                      selectedDiseases.includes("d_costo");
 
@@ -323,7 +349,7 @@ export default function PatientKiosk({ onExit }) {
     const detected = [];
     DISEASE_CATEGORIES.forEach(cat => {
       cat.items.forEach(item => {
-        if (item.keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+        if (item.keywords.some(kw => hasAffirmedKeyword(lower, kw))) {
           detected.push(item.id);
         }
       });
@@ -577,7 +603,7 @@ export default function PatientKiosk({ onExit }) {
     const lower = text.toLowerCase();
     const detected = [];
     KEYWORD_SYMPTOM_MAP.forEach(({ id, keywords }) => {
-      if (keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+      if (keywords.some(kw => hasAffirmedKeyword(lower, kw))) {
         detected.push(id);
       }
     });
@@ -992,23 +1018,57 @@ const renderStep5 = () => (
                 )}
               </div>
               <div className="symptom-chips" style={{ marginTop: '8px' }}>
-                {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
-                  const isSelected = symptoms.includes(id);
-                  const isAuto = autoExtracted.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={"symptom-chip severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
-                      style={{ opacity: (isSelected || isAuto) ? 1 : 0.65 }}
-                      onClick={() => toggleSymptom(id)}
-                    >
-                      {label}
-                      {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
-                      {(isSelected || isAuto) && <Check size={11} className="chip-check" />}
-                    </button>
-                  );
-                })}
+                {(() => {
+                  const liveTriage = evaluateClinicalTriage(chatHistory, symptoms, selectedDiseases);
+                  const userMessages = chatHistory.filter(m => m.sender === 'user');
+                  return SYMPTOM_CHIPS.map(({ id, label, severity }) => {
+                    const isSelected = symptoms.includes(id);
+                    const isAuto = autoExtracted.includes(id);
+                    const isActive = isSelected || isAuto;
+
+                    let chipStatus = "normal";
+                    let chipSubLabel = null;
+
+                    if (id === "s1" && isActive) {
+                      // Dynamic evaluation for chest pain based on conversation proof
+                      if (liveTriage.level === "high") {
+                        chipStatus = "critical";
+                        chipSubLabel = "Cardiac Red Alert";
+                      } else if (liveTriage.level === "low" && (selectedDiseases.includes("d_gerd") || selectedDiseases.includes("d_costo") || liveTriage.reason.toLowerCase().includes("non-cardiac"))) {
+                        chipStatus = "benign";
+                        chipSubLabel = "Non-Cardiac (Gastric)";
+                      } else {
+                        chipStatus = "evaluating";
+                        chipSubLabel = "Evaluating...";
+                      }
+                    } else if (id === "s4" && isActive) {
+                      if (liveTriage.level === "high" && liveTriage.reason.toLowerCase().includes("respiratory")) {
+                        chipStatus = "critical";
+                        chipSubLabel = "Severe Distress";
+                      } else {
+                        chipStatus = "evaluating";
+                        chipSubLabel = userMessages.length > 0 ? "Assessed" : "Evaluating...";
+                      }
+                    } else if (isActive) {
+                      chipStatus = "standard";
+                    }
+
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className={"symptom-chip status-" + chipStatus + " severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
+                        style={{ opacity: isActive ? 1 : 0.65 }}
+                        onClick={() => toggleSymptom(id)}
+                      >
+                        {label}
+                        {chipSubLabel && <span className={"chip-sub-tag " + chipStatus}>{chipSubLabel}</span>}
+                        {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
+                        {isActive && <Check size={11} className="chip-check" />}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </div>
 

@@ -311,7 +311,35 @@
 }
 .symptom-chip:hover { border-color: var(--k-teal); }
 .symptom-chip.selected { background: var(--k-teal); border-color: var(--k-teal); color: #fff; }
-.symptom-chip.severity-high.selected { background: #DC2626; border-color: #DC2626; }
+.symptom-chip.status-critical.selected { background: #DC2626 !important; border-color: #DC2626 !important; color: #fff !important; }
+.symptom-chip.status-benign.selected { background: #059669 !important; border-color: #059669 !important; color: #fff !important; }
+.symptom-chip.status-evaluating.selected { background: var(--k-teal) !important; border-color: var(--k-teal) !important; color: #fff !important; }
+.chip-sub-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.chip-sub-tag.evaluating {
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  animation: pulseEval 1.5s infinite alternate;
+}
+.chip-sub-tag.benign {
+  background: #D1FAE5;
+  color: #065F46;
+}
+.chip-sub-tag.critical {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+@keyframes pulseEval {
+  0% { opacity: 0.65; }
+  100% { opacity: 1; }
+}
 .symptom-chip.auto-detected {
   border-color: #8B5CF6; box-shadow: 0 0 0 2px rgba(139,92,246,0.2);
 }
