@@ -236,6 +236,16 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
+  // Read aloud the initial greeting when user enters the chat screen
+  useEffect(() => {
+    if (step === 4 && chatHistoryRef.current.length === 1 && followUpStageRef.current === 0) {
+      const timer = setTimeout(() => {
+        playTTS(chatHistoryRef.current[0].text);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
