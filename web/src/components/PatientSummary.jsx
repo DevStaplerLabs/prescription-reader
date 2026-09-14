@@ -138,21 +138,6 @@ const PatientSummaryModal = ({ patient, onClose }) => {
             <p className="ps-ai-text">{patient.aiSummary}</p>
           </div>
 
-          {/* Past Records (If uploaded) */}
-          {patient.pastRecords && (
-            <div className="ps-card ps-records-card" style={{ background: '#f8fafc', borderColor: '#cbd5e1' }}>
-              <div className="ps-card-label" style={{ color: '#0f172a' }}>
-                <FileText size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'text-bottom' }} />
-                Uploaded Patient Records: {patient.pastRecords.type}
-              </div>
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '0.9rem', color: '#334155' }}>
-                {patient.pastRecords.insights.map((ins, i) => (
-                  <li key={i} style={{ marginBottom: '4px' }}>{ins}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* Chief Complaint & Assessment */}
           <div className="ps-card ps-cc-card">
             <div className="ps-card-label">Chief Complaint & Voice Input</div>

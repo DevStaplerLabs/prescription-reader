@@ -313,9 +313,21 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
                         {patient.name.split(' ').map(n=>n[0]).join('')}
                       </div>
                       <div>
-                        <div className="dov-patient-name">
-                          {patient.name}
-                          {patient.tokenNumber && <span style={{ marginLeft: '8px', fontSize: '11px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{patient.tokenNumber}</span>}
+                        <div className="dov-patient-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{patient.name}</span>
+                          {patient.tokenNumber && <span style={{ fontSize: '11px', background: '#e2e8f0', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{patient.tokenNumber}</span>}
+                          {patient.pastRecords && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRecordsModalPatient(patient);
+                              }}
+                              style={{ background: '#e0f2fe', color: '#0284c7', border: 'none', padding: '4px', borderRadius: '4px', cursor: 'pointer', display: 'flex' }}
+                              title="View Attached Records"
+                            >
+                              <FileText size={14} />
+                            </button>
+                          )}
                         </div>
                         <div className="dov-patient-cc">{patient.chiefComplaint}</div>
                       </div>
@@ -375,6 +387,35 @@ const DashboardOverview = ({ patients, onSelectPatient, onNewPatient }) => {
           </table>
         </div>
       </div>
+
+      {/* Records Modal */}
+      {recordsModalPatient && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRecordsModalPatient(null)}>
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', width: '400px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 'bold' }}>
+                <FileText size={18} color="#0E7C66" />
+                <span>Uploaded Records: {recordsModalPatient.name}</span>
+              </div>
+              <button onClick={() => setRecordsModalPatient(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '8px' }}>
+              <strong>Document Type:</strong> {recordsModalPatient.pastRecords.type}
+            </div>
+            <div style={{ fontSize: '0.9rem', color: '#475569' }}>
+              <strong>AI Extracted Insights:</strong>
+              <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                {recordsModalPatient.pastRecords.insights.map((ins, i) => (
+                  <li key={i} style={{ marginBottom: '4px' }}>{ins}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
