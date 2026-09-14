@@ -304,6 +304,14 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
+  // Pre-load voices on mount to ensure they are available for playTTS
+  useEffect(() => {
+    if (window.speechSynthesis) {
+       window.speechSynthesis.getVoices();
+       window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
