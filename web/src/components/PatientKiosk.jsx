@@ -163,17 +163,24 @@ export default function PatientKiosk({ onExit }) {
       let aiResponse = "";
       const historyText = chatHistoryRef.current.map(m => m.text).join(" ") + " " + msgText;
       const lower = historyText.toLowerCase();
+      const lowerMsg = msgText.toLowerCase();
 
-      // Intelligent Symptom Tree Logic
-      let currentBranch = activeBranchRef.current;
-      if (!currentBranch) {
-        if (lower.includes("headache") || lower.includes("head pain") || lower.includes("सिरदर्द") || lower.includes("सर दर्द") || lower.includes("माथा")) currentBranch = "headache";
-        else if (lower.includes("stomach") || lower.includes("belly") || lower.includes("pain in abdomen") || lower.includes("पेट") || lower.includes("पेट दर्द")) currentBranch = "stomach";
-        else if (lower.includes("fever") || lower.includes("temperature") || lower.includes("बुखार") || lower.includes("तापमान")) currentBranch = "fever";
-        else if (lower.includes("cough") || lower.includes("खांसी") || lower.includes("कफ")) currentBranch = "cough";
-        else if (lower.includes("chest") || lower.includes("heart") || lower.includes("breath") || lower.includes("छाती") || lower.includes("सीने") || lower.includes("सांस")) currentBranch = "chest";
-        else currentBranch = "general";
-        setActiveBranch(currentBranch);
+      // Dynamic Symptom Tree Logic - update if new symptom detected in LATEST message
+      let newBranch = null;
+      if (lowerMsg.includes("chest") || lowerMsg.includes("heart") || lowerMsg.includes("breath") || lowerMsg.includes("छाती") || lowerMsg.includes("सीने") || lowerMsg.includes("सांस")) newBranch = "chest";
+      else if (lowerMsg.includes("headache") || lowerMsg.includes("head pain") || lowerMsg.includes("सिरदर्द") || lowerMsg.includes("सर दर्द") || lowerMsg.includes("माथा")) newBranch = "headache";
+      else if (lowerMsg.includes("stomach") || lowerMsg.includes("belly") || lowerMsg.includes("pain in abdomen") || lowerMsg.includes("पेट") || lowerMsg.includes("पेट दर्द")) newBranch = "stomach";
+      else if (lowerMsg.includes("fever") || lowerMsg.includes("temperature") || lowerMsg.includes("बुखार") || lowerMsg.includes("तापमान")) newBranch = "fever";
+      else if (lowerMsg.includes("cough") || lowerMsg.includes("खांसी") || lowerMsg.includes("कफ")) newBranch = "cough";
+      
+      if (newBranch && newBranch !== activeBranchRef.current) {
+         setActiveBranch(newBranch);
+         // If they mention a new symptom, we reset the follow-up stage to ask about it
+      }
+      
+      const currentBranch = newBranch || activeBranchRef.current || "general";
+      if (!activeBranchRef.current && !newBranch) {
+         setActiveBranch("general");
       }
 
       const SYMPTOM_TREE_EN = {
@@ -194,31 +201,55 @@ export default function PatientKiosk({ onExit }) {
         general: ["क्या आप बता सकते हैं कि ये लक्षण पहली बार कब शुरू हुए?", "क्या ये लक्षण लगातार बने रहते हैं, या दिन भर में आते-जाते रहते हैं?"]
       };
 
-      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
+      const COMMON_QUESTIONS_EN = [
+        "How exactly long have you been feeling these symptoms?",
+        "What medicines have you taken earlier for this, or have you consulted any other doctor?",
+        "Do you have any past medical history like diabetes or hypertension?",
+        "Are you allergic to any medications?"
+      ];
 
-      if (followUpStageRef.current === 0) {
+      const COMMON_QUESTIONS_HI = [
+        "आप कितने समय से इन लक्षणों को महसूस कर रहे हैं?",
+        "क्या आपने इसके लिए पहले कोई दवा ली है, या किसी अन्य डॉक्टर से सलाह ली है?",
+        "क्या आपको मधुमेह (डायबिटीज) या उच्च रक्तचाप (ब्लड प्रेशर) जैसी कोई पुरानी बीमारी है?",
+        "क्या आपको किसी दवा से एलर्जी है?"
+      ];
+
+      const AYUSH_QUESTIONS_EN = [
+        "To help with your Ayurvedic assessment, how is your digestion and appetite usually? Do you feel heavy or light after meals?",
+        "Lastly, how would you describe your body frame, natural body weight, and general temperament? (This helps determine your Prakriti)"
+      ];
+
+      const AYUSH_QUESTIONS_HI = [
+        "आपके आयुर्वेदिक निदान के लिए, आपकी पाचन शक्ति और भूख कैसी है? क्या भोजन के बाद भारीपन या हल्कापन महसूस होता है?",
+        "अंत में, आप अपने शरीर की बनावट, वजन और सामान्य स्वभाव का वर्णन कैसे करेंगे? (इससे आपकी प्रकृति जानने में मदद मिलती है)"
+      ];
+
+      const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
+      const commonQ = lang === "hi" ? COMMON_QUESTIONS_HI : COMMON_QUESTIONS_EN;
+      const ayushQ = lang === "hi" ? AYUSH_QUESTIONS_HI : AYUSH_QUESTIONS_EN;
+
+      let currentStage = (newBranch && newBranch !== activeBranchRef.current) ? 0 : followUpStageRef.current;
+
+      if (currentStage === 0) {
         aiResponse = tree[currentBranch][0];
-        setFollowUpStage(1);
-      } else if (followUpStageRef.current === 1) {
-        if (systemMode === "ayush") {
-          aiResponse = lang === "hi" 
-            ? "आपके आयुर्वेदिक निदान के लिए, आपकी पाचन शक्ति और भूख कैसी है? क्या भोजन के बाद भारीपन या हल्कापन महसूस होता है?" 
-            : "To help with your Ayurvedic assessment, how is your digestion and appetite usually? Do you feel heavy or light after meals?";
-          setFollowUpStage(2);
-        } else {
-          aiResponse = tree[currentBranch][1];
-          setFollowUpStage(3);
-        }
-      } else if (followUpStageRef.current === 2 && systemMode === "ayush") {
-         aiResponse = lang === "hi"
-            ? "अंत में, आप अपने शरीर की बनावट, वजन और सामान्य स्वभाव का वर्णन कैसे करेंगे? (इससे आपकी प्रकृति जानने में मदद मिलती है)"
-            : "Lastly, how would you describe your body frame, natural body weight, and general temperament? (This helps determine your Prakriti)";
-         setFollowUpStage(3);
+      } else if (currentStage === 1) {
+        aiResponse = tree[currentBranch][1];
+      } else if (currentStage === 2) {
+        aiResponse = commonQ[0];
+      } else if (currentStage === 3) {
+        aiResponse = commonQ[1];
+      } else if (currentStage === 4) {
+        aiResponse = systemMode === "ayush" ? ayushQ[0] : commonQ[2];
+      } else if (currentStage === 5) {
+        aiResponse = systemMode === "ayush" ? ayushQ[1] : commonQ[3];
       } else {
          aiResponse = lang === "hi"
             ? "विस्तृत जानकारी के लिए धन्यवाद। मैंने इसे डॉक्टर के लिए संकलित कर लिया है। अब आप अपना सारांश देखने के लिए 'Continue' पर क्लिक कर सकते हैं।"
             : "Thank you for the detailed information. I have compiled this for the doctor. You can now click Continue to review your summary.";
       }
+      
+      setFollowUpStage(currentStage + 1);
       
       setIsAiTyping(false);
       if (aiResponse) {
