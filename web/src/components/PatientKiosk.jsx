@@ -239,10 +239,7 @@ export default function PatientKiosk({ onExit }) {
   // Read aloud the initial greeting when user enters the chat screen
   useEffect(() => {
     if (step === 4 && chatHistoryRef.current.length === 1 && followUpStageRef.current === 0) {
-      const timer = setTimeout(() => {
-        playTTS(chatHistoryRef.current[0].text);
-      }, 50); // Reduced delay for faster TTS
-      return () => clearTimeout(timer);
+      playTTS(chatHistoryRef.current[0].text);
     }
   }, [step]);
 
