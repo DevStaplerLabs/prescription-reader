@@ -562,10 +562,13 @@ export default function PatientKiosk({ onExit }) {
     }
   }, [step]);
 
-  // Read aloud the initial greeting when user enters the chat screen
+  // Read aloud the initial greeting when user enters the chat screen (Step 5: Assessment)
   useEffect(() => {
-    if (step === 4 && chatHistoryRef.current.length === 1) {
+    if (step === 5 && chatHistoryRef.current.length === 1) {
       playTTS(chatHistoryRef.current[0].text);
+    } else if (step !== 5 && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setIsSpeakingTTS(false);
     }
   }, [step]);
 
