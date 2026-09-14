@@ -18,6 +18,115 @@ const LANGUAGES = [
   { code: "kn", speechCode: "kn-IN", name: "Kannada", native: "ಕನ್ನಡ", flag: "KN", region: "South India" },
 ];
 
+
+export const DISEASE_CATEGORIES = [
+  {
+    category: "Cardiovascular & Thoracic",
+    items: [
+      {
+        id: "d_angina",
+        name: "Acute Coronary Syndrome / Angina",
+        risk: "critical",
+        badge: "Critical Cardiac",
+        keywords: [
+          "crushing", "left arm", "radiat", "jaw", "neck", "profuse sweat", "cold sweat", "heart attack", "angina", "left hand",
+          "दिल का दौरा", "एंजाइना", "बाएं हाथ", "जबड़ा", "गर्दन", "पसीना", "भारी दबाव", "जकड़न"
+        ]
+      },
+      {
+        id: "d_costo",
+        name: "Costochondritis (Chest Wall Strain)",
+        risk: "low",
+        badge: "Musculoskeletal",
+        keywords: [
+          "touch", "press", "pressing", "movement", "rib", "muscle", "strain", "sharp", "bone",
+          "दबाने पर", "मांसपेशी", "हड्डी", "हिलने पर", "दबाने"
+        ]
+      },
+      {
+        id: "d_gerd",
+        name: "GERD / Gastric Acid Reflux",
+        risk: "low",
+        badge: "Gastric (Benign)",
+        keywords: [
+          "acid", "acidity", "gas", "burning", "heartburn", "after eating", "food", "burp", "belch", "antacid", "eno", "spicy",
+          "जलन", "गैस", "एसिडिटी", "खट्टी डकार", "खाना खाने के बाद", "सीने में जलन"
+        ]
+      }
+    ]
+  },
+  {
+    category: "Respiratory & Infectious",
+    items: [
+      {
+        id: "d_asthma",
+        name: "Bronchial Asthma / COPD",
+        risk: "urgent",
+        badge: "Pulmonary",
+        keywords: [
+          "asthma", "wheezing", "inhaler", "breathless", "short of breath", "chest tightness",
+          "दमा", "अस्थमा", "सांस फूलना", "सीटी जैसी आवाज", "दम घुटना"
+        ]
+      },
+      {
+        id: "d_flu",
+        name: "Viral Pyrexia / Influenza",
+        risk: "moderate",
+        badge: "Viral Syndrome",
+        keywords: [
+          "fever", "chills", "body ache", "shivering", "temperature", "flu", "cold", "viral",
+          "बुखार", "ठंड", "कंपकंपी", "बदन दर्द", "फ्लू", "वायरल"
+        ]
+      },
+      {
+        id: "d_bronchitis",
+        name: "Acute Bronchitis",
+        risk: "moderate",
+        badge: "Lower Airway",
+        keywords: [
+          "cough", "phlegm", "mucus", "yellow cough", "congestion",
+          "खांसी", "बलगम", "कफ", "छाती में जकड़न"
+        ]
+      }
+    ]
+  },
+  {
+    category: "Gastrointestinal & Neurological",
+    items: [
+      {
+        id: "d_ge",
+        name: "Acute Gastroenteritis",
+        risk: "urgent",
+        badge: "Gastrointestinal",
+        keywords: [
+          "vomit", "nausea", "diarrhea", "loose motion", "stomach cramp", "food poisoning", "stomach pain",
+          "उल्टी", "दस्त", "पतले दस्त", "पेट मरोड़", "जी मिचलाना", "पेट दर्द"
+        ]
+      },
+      {
+        id: "d_migraine",
+        name: "Migraine / Vascular Headache",
+        risk: "moderate",
+        badge: "Neurological",
+        keywords: [
+          "headache", "throbbing", "one side", "light sensitivity", "migraine", "aura", "sound sensitivity",
+          "आधा सिर दर्द", "माइग्रेन", "तेज सिरदर्द", "रोशनी से परेशानी", "सिरदर्द"
+        ]
+      },
+      {
+        id: "d_spondylosis",
+        name: "Lumbar / Cervical Spondylosis",
+        risk: "low",
+        badge: "Orthopaedic",
+        keywords: [
+          "back pain", "spine", "neck stiffness", "lower back", "sciatica", "joint pain",
+          "कमर दर्द", "रीढ़ की हड्डी", "गर्दन में अकड़न", "पीठ दर्द", "जोड़ों का दर्द"
+        ]
+      }
+    ]
+  }
+];
+
 const SYMPTOM_CHIPS = [
   { id: "s1", label: "Chest Pain", severity: "high" },
   { id: "s2", label: "Headache", severity: "medium" },
@@ -65,14 +174,16 @@ const KEYWORD_SYMPTOM_MAP = [
 
 const FALLBACK_SPEECH_PHRASES = {
   hi: [
-    "मुझे पिछले दो दिनों से बहुत तेज़ सिरदर्द है और थोड़ा बुखार महसूस हो रहा है।",
-    "छाती में हल्का दर्द है और सांस लेने में भी थोड़ी दिक्कत हो रही है।",
-    "पेट में दर्द है और सुबह से दो बार उल्टी भी हुई है।"
+    "सीने में जलन और एसिडिटी हो रही है, खाना खाने के बाद दर्द बढ़ता है पर पसीना या हाथ में दर्द बिल्कुल नहीं है।",
+    "सीने में बहुत तेज भारी दबाव है जो बाएं हाथ और जबड़े तक फैल रहा है और बहुत ठंडा पसीना आ रहा है।",
+    "सीने की पसली पर दबाने से दर्द होता है, सांस लेने में कोई परेशानी नहीं है।",
+    "मुझे पिछले दो दिनों से तेज़ सिरदर्द और थोड़ा बुखार महसूस हो रहा है।"
   ],
   en: [
-    "I have been having a severe throbbing headache for the past two days along with mild fever.",
-    "I feel chest tightness and slight breathlessness when walking upstairs.",
-    "Severe stomach cramps since yesterday night with nausea and dizziness."
+    "I have mild chest burning and acidity since lunch, but no sweating and pain does not go to my arm.",
+    "I have sharp pain in my chest that hurts only when I press on the rib bone, no breathlessness.",
+    "Severe substernal crushing chest pain radiating down my left arm with cold sweats.",
+    "I have been having a severe throbbing headache for the past two days along with mild fever."
   ],
   bn: [
     "আমার গত দুদিন ধরে খুব মাথা ব্যথা এবং হালকা জ্বর আছে।",
@@ -91,6 +202,107 @@ const FALLBACK_SPEECH_PHRASES = {
   ]
 };
 
+
+export const evaluateClinicalTriage = (chatHistory, symptoms, selectedDiseases = []) => {
+  const userText = chatHistory
+    .filter(m => m.sender === 'user')
+    .map(m => m.text.toLowerCase())
+    .join(" ");
+
+  // Cardiac red flags
+  const cardiacRedFlags = [
+    "left arm", "to the arm", "radiat", "jaw", "neck", "shoulder", 
+    "crushing", "heavy pressure", "elephant", "squeeze", "sweat", "cold sweat", 
+    "profuse sweat", "diaphoresis", "faint", "blackout",
+    "बाएं हाथ", "हाथ में", "जबड़ा", "जबड़े", "गर्दन", "पसीना", "ठंडा पसीना", "भारी दबाव", "जकड़न", "चक्कर"
+  ];
+
+  // Benign non-cardiac indicators
+  const benignIndicators = [
+    "acid", "acidity", "gas", "burning", "heartburn", "after food", "after meal", 
+    "antacid", "eno", "burp", "belch", "muscle", "press", "touch", "sharp", "movement",
+    "no radiation", "no sweat", "not radiating", "no sweating", "mild", "nahi",
+    "जलन", "गैस", "एसिडिटी", "खट्टी डकार", "खाना खाने के बाद", "दबाने पर", "मांसपेशी", "नहीं फैल रहा", "पसीना नहीं"
+  ];
+
+  const hasChestComplaint = userText.includes("chest") || userText.includes("heart") || 
+                           userText.includes("सीने") || userText.includes("छाती") || 
+                           symptoms.includes("s1");
+
+  const hasCardiacRedFlags = cardiacRedFlags.some(kw => userText.includes(kw)) ||
+                            selectedDiseases.includes("d_angina");
+
+  const hasBenignGastricOrMuscular = benignIndicators.some(kw => userText.includes(kw)) ||
+                                     selectedDiseases.includes("d_gerd") || 
+                                     selectedDiseases.includes("d_costo");
+
+  if (hasChestComplaint) {
+    if (hasCardiacRedFlags) {
+      return {
+        level: "high",
+        label: "ESI-2 Emergent",
+        color: "#DC2626",
+        flagged: true,
+        reason: "Cardiac Red Flag: Chest pain radiating to left arm/jaw or accompanied by diaphoresis & crushing pressure.",
+        clinicalFrame: "High suspicion of Acute Coronary Syndrome. Stat ECG, cardiac enzymes, and urgent cardiology consult indicated."
+      };
+    } else if (hasBenignGastricOrMuscular) {
+      return {
+        level: "low",
+        label: "ESI-4 Non-Urgent",
+        color: "#059669",
+        flagged: false,
+        reason: "Atypical Non-Cardiac Chest Discomfort: Symptoms consistent with GERD / Gastric reflux or chest wall strain. No cardiac red flags reported.",
+        clinicalFrame: "Atypical non-anginal chest discomfort. Stable hemodynamics, likely gastrointestinal/musculoskeletal origin. Routine OPD review."
+      };
+    } else {
+      return {
+        level: "medium",
+        label: "ESI-3 Urgent",
+        color: "#D97706",
+        flagged: false,
+        reason: "Undifferentiated Chest Discomfort: Moderate severity without overt cardiac red flags. Requires routine ECG.",
+        clinicalFrame: "Chest discomfort of moderate acuity. Rule out ischemic etiology via baseline ECG."
+      };
+    }
+  }
+
+  const isSevereBreath = (userText.includes("breath") || userText.includes("सांस")) && 
+                         (userText.includes("severe") || userText.includes("gasp") || userText.includes("बहुत ज्यादा"));
+  if (isSevereBreath) {
+    return {
+      level: "high",
+      label: "ESI-2 Emergent",
+      color: "#DC2626",
+      flagged: true,
+      reason: "Respiratory Distress: Severe shortness of breath reported.",
+      clinicalFrame: "Acute Respiratory Distress requiring urgent physician review."
+    };
+  }
+
+  if (userText.includes("fever") || userText.includes("बुखार") || 
+      userText.includes("pain") || userText.includes("दर्द") || 
+      userText.includes("vomit") || userText.includes("उल्टी")) {
+    return {
+      level: "medium",
+      label: "ESI-3 Urgent",
+      color: "#D97706",
+      flagged: false,
+      reason: "Acute Symptom Presentation: Moderate urgency requiring standard OPD consultation.",
+      clinicalFrame: "Standard symptomatic presentation with stable vitals."
+    };
+  }
+
+  return {
+    level: "low",
+    label: "ESI-4 Non-Urgent",
+    color: "#059669",
+    flagged: false,
+    reason: "Routine OPD Visit: Stable presentation.",
+    clinicalFrame: "Standard non-urgent consultation."
+  };
+};
+
 export default function PatientKiosk({ onExit }) {
   const [step, setStep] = useState(1);
   const [lang, setLang] = useState("en");
@@ -99,6 +311,28 @@ export default function PatientKiosk({ onExit }) {
   });
   const [consents, setConsents] = useState({ dataShare: false, aiAnalysis: false, digital: false });
   const [symptoms, setSymptoms] = useState([]);
+  const [selectedDiseases, setSelectedDiseases] = useState([]);
+  const [autoDetectedDiseases, setAutoDetectedDiseases] = useState([]);
+
+  const toggleDisease = (id) => {
+    setSelectedDiseases(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const extractDiseasesFromText = (text) => {
+    const lower = text.toLowerCase();
+    const detected = [];
+    DISEASE_CATEGORIES.forEach(cat => {
+      cat.items.forEach(item => {
+        if (item.keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+          detected.push(item.id);
+        }
+      });
+    });
+    if (detected.length > 0) {
+      setAutoDetectedDiseases(prev => Array.from(new Set([...prev, ...detected])));
+      setSelectedDiseases(prev => Array.from(new Set([...prev, ...detected])));
+    }
+  };
   const [voiceText, setVoiceText] = useState("");
   const [interimText, setInterimText] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -165,6 +399,7 @@ export default function PatientKiosk({ onExit }) {
     setChatHistory(prev => [...prev, { sender: "user", text: msgText }]);
     setChatInput("");
     extractSymptomsFromText(msgText);
+    extractDiseasesFromText(msgText);
     
     setIsAiTyping(true);
 
@@ -254,7 +489,7 @@ export default function PatientKiosk({ onExit }) {
         stomach: ["Is the pain sharp or dull, and does it get worse after eating?", "Have you had any vomiting, diarrhea, or unusual bowel movements recently?"],
         fever: ["Have you checked your exact temperature recently? How high is it?", "Are you experiencing any body aches, shivering chills, or sweating?"],
         cough: ["Is it a dry cough, or are you coughing up phlegm? If so, what color is it?", "Are you experiencing any shortness of breath or wheezing sound when you breathe?"],
-        chest: ["Does the chest pain radiate to your left arm, neck, or jaw?", "Do you feel any heavy tightness, sweating, or severe difficulty breathing?"]
+        chest: ["To assess your chest discomfort: Is it a burning acidity sensation that worsens after food/lying down, or a heavy crushing tightness spreading to your left arm or jaw?", "Are you experiencing cold sweating, dizziness, or severe difficulty breathing right now?"]
       };
 
       const SYMPTOM_TREE_HI = {
@@ -262,7 +497,7 @@ export default function PatientKiosk({ onExit }) {
         stomach: ["क्या दर्द तेज है या हल्का, और क्या यह खाने के बाद बढ़ जाता है?", "क्या आपको हाल ही में उल्टी, दस्त या मल त्याग में कोई असामान्य बदलाव महसूस हुआ है?"],
         fever: ["क्या आपने हाल ही में अपना तापमान मापा है? यह कितना है?", "क्या आपको शरीर में दर्द, ठंड लगना या पसीना आ रहा है?"],
         cough: ["क्या यह सूखी खांसी है, या बलगम आ रहा है? यदि हां, तो उसका रंग कैसा है?", "क्या आपको सांस लेने में तकलीफ या सीटी बजने जैसी आवाज़ आ रही है?"],
-        chest: ["क्या सीने का दर्द आपके बाएं हाथ, गर्दन या जबड़े तक फैल रहा है?", "क्या आपको भारीपन, पसीना या सांस लेने में गंभीर कठिनाई महसूस हो रही है?"]
+        chest: ["सीने की तकलीफ के सही मूल्यांकन के लिए: क्या यह खाना खाने के बाद एसिडिटी जैसी जलन लग रही है, या फिर बहुत भारी दबाव है जो बाएं हाथ या जबड़े तक फैल रहा है?", "क्या आपको साथ में ठंडा पसीना, अचानक चक्कर, या बहुत तेज सांस फूलने की समस्या हो रही है?"]
       };
       
       const tree = lang === "hi" ? SYMPTOM_TREE_HI : SYMPTOM_TREE_EN;
@@ -338,6 +573,7 @@ export default function PatientKiosk({ onExit }) {
     setSymptoms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const extractSymptomsFromText = (text) => {
+    extractDiseasesFromText(text);
     const lower = text.toLowerCase();
     const detected = [];
     KEYWORD_SYMPTOM_MAP.forEach(({ id, keywords }) => {
@@ -745,24 +981,77 @@ const renderStep5 = () => (
 
       <div className="assessment-grid">
         <div className="assessment-pane">
-          <div className="pane-label">Symptom Checklist (Auto-detected)</div>
-          <div className="symptom-chips">
-            {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
-              const isSelected = symptoms.includes(id);
-              const isAuto = autoExtracted.includes(id);
-              return (
-                <button
-                  key={id}
-                  className={"symptom-chip severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
-                  style={{ opacity: (isSelected || isAuto) ? 1 : 0.65 }}
-                  onClick={() => toggleSymptom(id)}
-                >
-                  {label}
-                  {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
-                  {(isSelected || isAuto) && <Check size={11} className="chip-check" />}
-                </button>
-              );
-            })}
+          <div className="assessment-scroll-pane">
+            <div>
+              <div className="pane-label-row">
+                <span className="pane-label">Symptom Checklist (Auto-detected)</span>
+                {autoExtracted.length > 0 && (
+                  <span className="auto-detect-count-tag">
+                    <Sparkles size={11} /> {autoExtracted.length} Detected
+                  </span>
+                )}
+              </div>
+              <div className="symptom-chips" style={{ marginTop: '8px' }}>
+                {SYMPTOM_CHIPS.map(({ id, label, severity }) => {
+                  const isSelected = symptoms.includes(id);
+                  const isAuto = autoExtracted.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={"symptom-chip severity-" + severity + (isSelected ? " selected" : "") + (isAuto ? " auto-detected" : "")}
+                      style={{ opacity: (isSelected || isAuto) ? 1 : 0.65 }}
+                      onClick={() => toggleSymptom(id)}
+                    >
+                      {label}
+                      {isAuto && <Sparkles size={11} className="chip-auto-icon" title="AI Auto-detected from voice" />}
+                      {(isSelected || isAuto) && <Check size={11} className="chip-check" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="pane-label-row">
+                <span className="pane-label">Potential Conditions / Differential Triage</span>
+                {selectedDiseases.length > 0 && (
+                  <span className="auto-detect-count-tag">
+                    <Sparkles size={11} /> {selectedDiseases.length} Mapped
+                  </span>
+                )}
+              </div>
+              <div className="disease-categories-container">
+                {DISEASE_CATEGORIES.map(cat => (
+                  <div key={cat.category} className="disease-category-block">
+                    <div className="disease-category-title">{cat.category}</div>
+                    <div className="disease-chips-grid">
+                      {cat.items.map(item => {
+                        const isSelected = selectedDiseases.includes(item.id);
+                        const isAuto = autoDetectedDiseases.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`disease-chip ${isSelected ? "selected" : ""} ${isAuto ? "auto-detected" : ""} ${item.risk === 'critical' ? 'risk-critical' : ''}`}
+                            onClick={() => toggleDisease(item.id)}
+                          >
+                            <div className="disease-chip-main">
+                              <span className="disease-name">{item.name}</span>
+                              {isAuto && <Sparkles size={12} className="disease-auto-sparkle" title="AI Auto-detected from conversation" />}
+                            </div>
+                            <div className="disease-chip-meta">
+                              <span className={`disease-risk-tag ${item.risk}`}>{item.badge}</span>
+                              {(isSelected || isAuto) && <Check size={12} style={{ color: item.risk === 'critical' ? '#DC2626' : 'var(--k-teal)' }} />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -866,10 +1155,10 @@ const renderStep5 = () => (
 
 
   const handleFinalSubmit = () => {
-    const historyText = chatHistory.map(m => m.text).join(" ").toLowerCase();
-    const isEmergency = historyText.includes("chest") || historyText.includes("breath");
-    const triageLvl = isEmergency ? "high" : (historyText.includes("fever") || historyText.includes("pain") ? "medium" : "low");
-    const triageLabel = triageLvl === "high" ? "ESI-2 Emergent" : (triageLvl === "medium" ? "ESI-3 Urgent" : "ESI-4 Non-Urgent");
+    const triageResult = evaluateClinicalTriage(chatHistory, symptoms, selectedDiseases);
+    const selectedDiseaseNames = DISEASE_CATEGORIES.flatMap(c => c.items)
+      .filter(d => selectedDiseases.includes(d.id))
+      .map(d => d.name);
 
     const newPatient = {
       id: 'P0' + Math.floor(10 + Math.random() * 90),
@@ -880,18 +1169,21 @@ const renderStep5 = () => (
       age: form.age || 30,
       gender: form.gender || 'Unknown',
       chiefComplaint: form.visitReason || 'General Checkup',
-      flagged: triageLvl === 'high',
-      flagReason: triageLvl === 'high' ? 'AI Triage Alert: ' + triageLabel : '',
+      flagged: triageResult.flagged,
+      flagReason: triageResult.flagged ? 'AI Triage Alert: ' + triageResult.reason : '',
       status: 'Waiting',
-      triageLevel: triageLabel,
+      triageLevel: triageResult.label,
       department: form.department || 'General Medicine',
       checkInTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       waitMins: 0,
       avatarColor: 'teal',
-      aiSummary: "AI HPI Notes:\n" + chatHistory.filter(m => m.sender === 'user').map(m => "- " + m.text).join('\n'),
+      aiSummary: "AI Clinical Assessment & Differentials:\n" +
+        "- Triage Severity: " + triageResult.label + " (" + triageResult.reason + ")\n" +
+        (selectedDiseaseNames.length > 0 ? "- Suspected Differentials: " + selectedDiseaseNames.join(", ") + "\n" : "") +
+        "- Patient Transcript:\n" + chatHistory.filter(m => m.sender === 'user').map(m => "  • " + m.text).join('\n'),
       aiConfidence: 85,
       patientWords: '"' + chatHistory.filter(m => m.sender === 'user').map(m => m.text).join(' ') + '"',
-      clinicalFrame: 'Automated AI Triage Intake via Kiosk. Pending physician review.',
+      clinicalFrame: triageResult.clinicalFrame,
       vitals: { bp: '120/80 mmHg', hr: '80 bpm', spo2: '98%', temp: '98.6 °F' },
       ayush: systemMode === 'ayush' ? {
         prakriti: { vata: 33, pitta: 33, kapha: 34 },
@@ -910,10 +1202,10 @@ const renderStep5 = () => (
   const renderStep6 = () => {
     const selectedSymptomLabels = SYMPTOM_CHIPS.filter(s => symptoms.includes(s.id)).map(s => s.label);
 
-    const historyText = chatHistory.map(m => m.text).join(" ").toLowerCase();
-    const isEmergency = historyText.includes("chest") || historyText.includes("breath");
-    const triageLevel = isEmergency ? "high" : (historyText.includes("fever") || historyText.includes("pain") ? "medium" : "low");
-    const triageLabel = triageLevel === "high" ? "ESI-2 Emergent" : (triageLevel === "medium" ? "ESI-3 Urgent" : "ESI-4 Non-Urgent");
+    const triageResult = evaluateClinicalTriage(chatHistory, symptoms, selectedDiseases);
+    const selectedDiseaseNames = DISEASE_CATEGORIES.flatMap(c => c.items)
+      .filter(d => selectedDiseases.includes(d.id))
+      .map(d => d.name);
 
     return (
       <div className="kiosk-step-content review-step">
@@ -948,13 +1240,31 @@ const renderStep5 = () => (
                         : <span>---</span>}
                     </div>
                   </div>
+                  <div className="review-row">
+                    <span>Suspected Conditions</span>
+                    <div className="review-symptom-tags">
+                      {selectedDiseaseNames.length > 0
+                        ? selectedDiseaseNames.map(d => <span key={d} className="sym-tag" style={{ background: '#F3E8FF', color: '#6D28D9' }}>{d}</span>)
+                        : <span>---</span>}
+                    </div>
+                  </div>
+                  <div className="review-row">
+                    <span>Calculated Triage</span>
+                    <strong style={{ color: triageResult.color }}>{triageResult.label}</strong>
+                  </div>
                 </div>
                 <div className="review-voice-box">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                     <strong style={{ fontSize: '0.8rem' }}>AI Conversation Summary ({systemMode === 'ayush' ? 'AYUSH' : 'Allopathy'}):</strong>
                     {chatHistory.filter(m => m.sender === 'user').map((msg, idx) => (
                       <p key={idx} style={{ fontStyle: 'italic', margin: 0, fontSize: '0.8rem', color: '#4B5563' }}>- "{msg.text}"</p>
                     ))}
+                    <div className={`triage-rationale-box ${triageResult.level}`}>
+                      <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong>Triage Rationale ({triageResult.label}):</strong> {triageResult.reason}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
